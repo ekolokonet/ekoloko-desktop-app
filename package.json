@@ -9,7 +9,7 @@
     "dist": "yarn compile && electron-builder",
     "dist-32bit": "yarn compile && electron-builder --ia32",
     "dist:dir": "yarn dist --dir -c.compression=store -c.mac.identity=null",
-    "dist-for-all": "electron-builder -mwl"
+    "dist:linux": "yarn compile && electron-builder -l"
   },
   "dependencies": {
     "source-map-support": "^0.5.16"
@@ -30,6 +30,9 @@
       "allowToChangeInstallationDirectory": "true",
       "deleteAppDataOnUninstall": "true",
       "runAfterFinish": "true"
+    },
+    "linux": {
+          "target": ["AppImage", "deb", "rpm"]
     },
     "extraResources": [
       "./plugins/**"
