@@ -14,10 +14,6 @@ switch (process.platform) {
     pluginName = "linux/libpepflashplayer.so"
     os = "linux";
     break;
-  case "darwin":
-    pluginName = "darwin/FlashPlayer.dll";
-    os = "darwin";
-    break;
   default:
     pluginName = 'x64/pepflashplayer.dll';
     break;
@@ -27,7 +23,7 @@ app.commandLine.appendSwitch(
   "ppapi-flash-path",
   path.join(__dirname + "/../plugins/", pluginName)
 );
-
+ 
 if (os==="linux")
 {
   app.commandLine.appendSwitch("ppapi-flash-version", "34.0.0.137");
