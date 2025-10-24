@@ -1,0 +1,38 @@
+{
+  "name": "ekoloko-rewritten",
+  "version": "1.0.0",
+  "author": "Arnon001 <support@arnon.games>",
+  "description": "Application for ekoloko",
+  "scripts": {
+    "dev": "electron-webpack dev",
+    "compile": "electron-webpack",
+    "dist": "yarn compile && electron-builder",
+    "dist-32bit": "yarn compile && electron-builder --ia32",
+    "dist:dir": "yarn dist --dir -c.compression=store -c.mac.identity=null",
+    "dist-for-all": "electron-builder -mwl"
+  },
+  "dependencies": {
+    "source-map-support": "^0.5.16"
+  },
+  "devDependencies": {
+    "electron": "8.2.0",
+    "electron-builder": "^22.4.1",
+    "electron-webpack": "^2.8.2",
+    "webpack": "~4.42.1"
+  },
+  "build": {
+    "appId": "org.ekoloko",
+    "productName": "ekoloko",
+    "nsis": {
+      "allowElevation": "true",
+      "oneClick": "false",
+      "perMachine": "true",
+      "allowToChangeInstallationDirectory": "true",
+      "deleteAppDataOnUninstall": "true",
+      "runAfterFinish": "true"
+    },
+    "extraResources": [
+      "./plugins/**"
+    ]
+  }
+}
