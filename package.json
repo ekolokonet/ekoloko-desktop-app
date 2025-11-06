@@ -31,9 +31,6 @@
       "deleteAppDataOnUninstall": "true",
       "runAfterFinish": "true"
     },
-    "linux": {
-          "target": ["AppImage", "deb", "rpm"]
-    },
     "extraResources": [
       "./plugins/**"
     ]
