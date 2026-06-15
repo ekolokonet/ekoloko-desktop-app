@@ -16,7 +16,7 @@ jobs:
             build_cmd: npm run build
             artifact_name: windows
             artifact_path: dist/*.exe
-          - os: macos-latest
+          - os: macos-13
             build_cmd: npm run dist:mac
             artifact_name: macos
             artifact_path: dist/*.dmg
