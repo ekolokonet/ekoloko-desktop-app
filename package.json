@@ -4,12 +4,17 @@
   "author": "Arnon001 <support@arnon.games>",
   "description": "Application for ekoloko",
   "scripts": {
-    "dev": "electron-webpack dev",
-    "compile": "electron-webpack",
-    "dist": "yarn compile && electron-builder",
-    "dist-32bit": "yarn compile && electron-builder --ia32",
-    "dist:dir": "yarn dist --dir -c.compression=store -c.mac.identity=null",
-    "dist:linux": "yarn compile && electron-builder -l"
+    "dev": "set NODE_OPTIONS=--openssl-legacy-provider && electron-webpack dev",
+    "compile": "set NODE_OPTIONS=--openssl-legacy-provider && electron-webpack",
+    "build": "npm run compile && electron-builder",
+    "dist": "npm run compile && electron-builder",
+    "dist-32bit": "npm run compile && electron-builder --ia32",
+    "dist:dir": "npm run dist -- --dir -c.compression=store -c.mac.identity=null",
+    "dist:linux": "npm run compile && electron-builder -l",
+    "mac": "npm run compile && electron-builder --mac",
+    "dist:mac": "npm run compile && electron-builder --mac",
+    "dist:mac:universal": "npm run compile && electron-builder --mac --universal",
+    "dist:mas": "npm run compile && electron-builder --mas"
   },
   "dependencies": {
     "source-map-support": "^0.5.16"
@@ -23,6 +28,14 @@
   "build": {
     "appId": "org.ekoloko",
     "productName": "ekoloko",
+    "mac": {
+      "target": [
+        "dmg",
+        "zip",
+        "mas"
+      ]
+    },
+    "mas": {},
     "nsis": {
       "allowElevation": "true",
       "oneClick": "false",
@@ -32,7 +45,8 @@
       "runAfterFinish": "true"
     },
     "extraResources": [
-      "./plugins/**"
+      "./plugins/**",
+      "./assets/**"
     ]
   }
 }
