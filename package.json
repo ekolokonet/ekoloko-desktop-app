@@ -8,13 +8,11 @@
     "compile": "set NODE_OPTIONS=--openssl-legacy-provider && electron-webpack",
     "build": "npm run compile && electron-builder",
     "dist": "npm run compile && electron-builder",
-    "dist-32bit": "npm run compile && electron-builder --ia32",
     "dist:dir": "npm run dist -- --dir -c.compression=store -c.mac.identity=null",
     "dist:linux": "npm run compile && electron-builder -l",
     "mac": "npm run compile && electron-builder --mac",
     "dist:mac": "npm run compile && electron-builder --mac",
-    "dist:mac:universal": "npm run compile && electron-builder --mac --universal",
-    "dist:mas": "npm run compile && electron-builder --mas"
+    "dist:mac:universal": "npm run compile && electron-builder --mac --universal"
   },
   "dependencies": {
     "source-map-support": "^0.5.16"
@@ -28,25 +26,36 @@
   "build": {
     "appId": "org.ekoloko",
     "productName": "ekoloko",
+    "compression": "maximum",
+    "afterPack": "./scripts/afterPack.js",
+    "extraResources": [
+      "./assets/**"
+    ],
+    "win": {
+      "extraResources": [
+        "./assets/**",
+        "./plugins/x64/**"
+      ]
+    },
+    "linux": {
+      "extraResources": [
+        "./assets/**",
+        "./plugins/linux/**"
+      ]
+    },
     "mac": {
       "target": [
         "dmg",
-        "zip",
-        "mas"
+        "zip"
       ]
     },
-    "mas": {},
     "nsis": {
-      "allowElevation": "true",
-      "oneClick": "false",
-      "perMachine": "true",
-      "allowToChangeInstallationDirectory": "true",
-      "deleteAppDataOnUninstall": "true",
-      "runAfterFinish": "true"
-    },
-    "extraResources": [
-      "./plugins/**",
-      "./assets/**"
-    ]
+      "oneClick": false,
+      "perMachine": false,
+      "allowElevation": false,
+      "allowToChangeInstallationDirectory": true,
+      "deleteAppDataOnUninstall": true,
+      "runAfterFinish": true
+    }
   }
 }
