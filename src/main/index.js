@@ -3,50 +3,65 @@ const { execFile } = require("child_process");
 const path = require("path");
 const fs = require("fs");
 
-const LOGIN_URL = "https://prod.ekoloko.org/ekoloko/login.html";
+const DEFAULT_LOGIN_URL = "https://prod.ekoloko.org/ekoloko/login.html";
+const MAC_LOGIN_URL = "https://play.ekoloko.org/ekoloko/login.html";
 const DISCORD_URL = "https://discord.gg/5uBSQx4yWa";
 const CONTROL_BAR_HEIGHT = 100;
 
 let win;
 let siteView;
-let pluginName;
-let os;
 let isDarkMode = false;
 let darkModeCSSKey = null;
 
-switch (process.platform) {
-  case "win32":
-    pluginName = process.arch == "x64" ? "x64/pepflashplayer.dll" : "x32/pepflashplayer32.dll";
-    os = "windows";
-    break;
-  default:
-    pluginName = "x64/pepflashplayer.dll";
-    break;
-}
-
-app.commandLine.appendSwitch(
-  "ppapi-flash-path",
-  path.join(__dirname + "/../plugins/", pluginName)
-);
-
-app.commandLine.appendSwitch("ppapi-flash-version", "32.0.0.371");
-
-const assetPathCache = new Map();
-function getAssetPath(filename) {
-  if (assetPathCache.has(filename)) return assetPathCache.get(filename);
+const resourcePathCache = new Map();
+function getResourcePath(...segments) {
+  const key = segments.join("/");
+  if (resourcePathCache.has(key)) return resourcePathCache.get(key);
   const candidates = [
-    path.join(process.resourcesPath || "", "assets", filename),
-    path.join(__dirname, "..", "..", "assets", filename),
-    path.join(__dirname, "..", "..", "..", "assets", filename),
+    path.join(process.resourcesPath || "", ...segments),
+    path.join(__dirname, "..", ...segments),
+    path.join(__dirname, "..", "..", ...segments),
+    path.join(__dirname, "..", "..", "..", ...segments),
   ];
   for (const p of candidates) {
     if (fs.existsSync(p)) {
-      assetPathCache.set(filename, p);
+      resourcePathCache.set(key, p);
       return p;
     }
   }
-  assetPathCache.set(filename, null);
+  resourcePathCache.set(key, null);
   return null;
+}
+
+function getFlashPluginName() {
+  switch (process.platform) {
+    case "win32":
+      return process.arch === "x64" ? "x64/pepflashplayer.dll" : "x32/pepflashplayer32.dll";
+    case "linux":
+      return "linux/libpepflashplayer.so";
+    case "darwin":
+      return "mac/PepperFlashPlayer.plugin";
+    default:
+      return null;
+  }
+}
+
+const flashPluginName = getFlashPluginName();
+const flashPluginPath = flashPluginName ? getResourcePath("plugins", flashPluginName) : null;
+
+if (flashPluginPath) {
+  app.commandLine.appendSwitch("ppapi-flash-path", flashPluginPath);
+  app.commandLine.appendSwitch("ppapi-flash-version", "32.0.0.371");
+} else {
+  console.warn(`Pepper Flash plugin not found for ${process.platform}`);
+}
+
+function getAssetPath(filename) {
+  return getResourcePath("assets", filename);
+}
+
+function getLoginUrl() {
+  return process.platform === "darwin" ? MAC_LOGIN_URL : DEFAULT_LOGIN_URL;
 }
 
 function getAssetDataUrl(filename) {
@@ -418,7 +433,7 @@ function createWindow() {
   win.setBrowserView(siteView);
   siteView.setAutoResize({ width: true, height: true });
   setViewBounds();
-  siteView.webContents.loadURL(LOGIN_URL);
+  siteView.webContents.loadURL(getLoginUrl());
   siteView.webContents.setAudioMuted(false);
 
   siteView.webContents.on("new-window", (event, url) => {

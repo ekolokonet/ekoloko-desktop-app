@@ -1,5 +1,8 @@
 .DS_Store
+._*
 dist/
 node_modules/
 thumbs.db
 .idea/
+*.dmg
+*.blockmap

@@ -4,14 +4,16 @@
   "author": "Arnon001 <support@arnon.games>",
   "description": "Application for ekoloko",
   "scripts": {
-    "dev": "set NODE_OPTIONS=--openssl-legacy-provider && electron-webpack dev",
-    "compile": "set NODE_OPTIONS=--openssl-legacy-provider && electron-webpack",
+    "dev": "node scripts/withLegacyOpenSSL.js electron-webpack dev",
+    "compile": "node scripts/withLegacyOpenSSL.js electron-webpack",
     "build": "npm run compile && electron-builder",
     "dist": "npm run compile && electron-builder",
     "dist:dir": "npm run dist -- --dir -c.compression=store -c.mac.identity=null",
     "dist:linux": "npm run compile && electron-builder -l",
-    "mac": "npm run compile && electron-builder --mac",
-    "dist:mac": "npm run compile && electron-builder --mac",
+    "mac": "npm run compile && electron-builder --mac zip --x64 -c.mac.identity=null",
+    "dist:mac": "npm run compile && electron-builder --mac zip --x64 -c.mac.identity=null",
+    "dist:mac:dmg": "npm run dist:mac && node scripts/createMacDmg.js",
+    "dist:mac:dir": "npm run compile && electron-builder --mac --x64 --dir -c.compression=store -c.mac.identity=null",
     "dist:mac:universal": "npm run compile && electron-builder --mac --universal"
   },
   "dependencies": {
@@ -49,17 +51,17 @@
     },
     "mac": {
       "target": [
-        "dmg",
         "zip"
       ],
+      "extraResources": [
+        "./plugins/mac/**"
+      ],
+      "icon": "build/icon.icns",
       "identity": "${env.APPLE_IDENTITY}",
       "hardenedRuntime": true,
       "gatekeeperAssess": false,
       "entitlements": "build/entitlements.mac.plist",
-      "entitlementsInherit": "build/entitlements.mac.plist",
-      "notarize": {
-        "teamId": "${env.APPLE_TEAM_ID}"
-      }
+      "entitlementsInherit": "build/entitlements.mac.plist"
     },
     "nsis": {
       "oneClick": false,
