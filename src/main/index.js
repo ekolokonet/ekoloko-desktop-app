@@ -31,15 +31,21 @@ app.commandLine.appendSwitch(
 
 app.commandLine.appendSwitch("ppapi-flash-version", "32.0.0.371");
 
+const assetPathCache = new Map();
 function getAssetPath(filename) {
+  if (assetPathCache.has(filename)) return assetPathCache.get(filename);
   const candidates = [
     path.join(process.resourcesPath || "", "assets", filename),
     path.join(__dirname, "..", "..", "assets", filename),
     path.join(__dirname, "..", "..", "..", "assets", filename),
   ];
   for (const p of candidates) {
-    if (fs.existsSync(p)) return p;
+    if (fs.existsSync(p)) {
+      assetPathCache.set(filename, p);
+      return p;
+    }
   }
+  assetPathCache.set(filename, null);
   return null;
 }
 
@@ -63,11 +69,13 @@ function getAssetFontUrl(filename) {
   }
 }
 
+let controlPageHtml = null;
 function getControlPageHtml() {
+  if (controlPageHtml) return controlPageHtml;
   const logoSrc = getAssetDataUrl("3.png");
   const discordSrc = getAssetDataUrl("d-1.png");
   const fontSrc = getAssetFontUrl("Gan CLM Bold.ttf");
-  return `
+  const html = `
     <!doctype html>
     <html>
       <head>
@@ -329,13 +337,21 @@ function getControlPageHtml() {
       </body>
     </html>
   `;
+  controlPageHtml = html;
+  return html;
+}
+
+let controlHtmlPath = null;
+function getControlPagePath() {
+  if (!controlHtmlPath) {
+    controlHtmlPath = path.join(app.getPath("temp"), "ekoloko-control.html");
+    fs.writeFileSync(controlHtmlPath, getControlPageHtml(), "utf8");
+  }
+  return controlHtmlPath;
 }
 
 function setViewBounds() {
-  if (!win || !siteView) {
-    return;
-  }
-
+  if (!win || !siteView) return;
   const bounds = win.getContentBounds();
   siteView.setBounds({
     x: 0,
@@ -343,8 +359,6 @@ function setViewBounds() {
     width: bounds.width,
     height: Math.max(0, bounds.height - CONTROL_BAR_HEIGHT),
   });
-
-  siteView.setAutoResize({ width: true, height: true });
 }
 
 async function applyZoom(zoomFactor) {
@@ -388,9 +402,7 @@ function createWindow() {
 
   win.maximize();
 
-  const controlHtmlPath = path.join(app.getPath("temp"), `ekoloko-control-${Date.now()}.html`);
-  fs.writeFileSync(controlHtmlPath, getControlPageHtml(), "utf8");
-  win.loadFile(controlHtmlPath);
+  win.loadFile(getControlPagePath());
 
   siteView = new BrowserView({
     webPreferences: {
@@ -399,10 +411,12 @@ function createWindow() {
       devTools: false,
       plugins: true,
       allowRunningInsecureContent: true,
+      partition: "nopersist",
     },
   });
 
   win.setBrowserView(siteView);
+  siteView.setAutoResize({ width: true, height: true });
   setViewBounds();
   siteView.webContents.loadURL(LOGIN_URL);
   siteView.webContents.setAudioMuted(false);
