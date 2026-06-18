@@ -1,0 +1,97 @@
+name: Release
+
+# Every push to main builds installers for Windows, macOS and Linux and
+# publishes them as a single GitHub Release. Clients with electron-updater
+# (Windows + Linux) auto-update from that release.
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+# Serialize releases so two quick commits don't race on the same tag.
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            flag: "--win"
+          - os: macos-14        # Apple Silicon runner (Intel macos-13 is being retired);
+            flag: "--mac --x64" # force x64 since Electron 8 has no arm64 build. No native
+                                # modules here, so cross-arch packaging just assembles the x64 app.
+          - os: ubuntu-latest    # if AppImage/FUSE fails here, pin to ubuntu-22.04
+            flag: "--linux"
+
+    runs-on: ${{ matrix.os }}
+    env:
+      # All three targets are x64. Forces electron's postinstall to fetch the x64
+      # binary on the Apple-Silicon mac runner (Electron 8 has no darwin-arm64 build).
+      npm_config_arch: x64
+    defaults:
+      run:
+        shell: bash
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Set release version (1.0.<run number>)
+        run: npm version "1.0.${{ github.run_number }}" --no-git-tag-version --allow-same-version
+
+      - name: Compile
+        run: npm run compile
+        env:
+          NODE_OPTIONS: --openssl-legacy-provider
+
+      - name: Package installers
+        run: npx electron-builder ${{ matrix.flag }} --publish never
+        env:
+          NODE_OPTIONS: --openssl-legacy-provider
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: dist-${{ matrix.os }}
+          if-no-files-found: error
+          path: |
+            dist/*.exe
+            dist/*.dmg
+            dist/*.zip
+            dist/*.AppImage
+            dist/*.yml
+            dist/*.blockmap
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Download all build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          merge-multiple: true
+
+      - name: Publish GitHub Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release create "v1.0.${{ github.run_number }}" artifacts/* \
+            --repo "${{ github.repository }}" \
+            --target "${{ github.sha }}" \
+            --title "ekoloko v1.0.${{ github.run_number }}" \
+            --notes "Automated release from commit ${{ github.sha }}." \
+            --latest

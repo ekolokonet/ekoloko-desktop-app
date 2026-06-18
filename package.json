@@ -1,0 +1,78 @@
+{
+  "name": "ekoloko-rewritten",
+  "version": "1.0.0",
+  "author": "Arnon001 <support@arnon.games>",
+  "description": "Application for ekoloko",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ekolokonet/ekoloko-desktop-app.git"
+  },
+  "scripts": {
+    "dev": "set NODE_OPTIONS=--openssl-legacy-provider && electron-webpack dev",
+    "compile": "set NODE_OPTIONS=--openssl-legacy-provider && electron-webpack",
+    "build": "npm run compile && electron-builder",
+    "dist": "npm run compile && electron-builder",
+    "dist:dir": "npm run dist -- --dir -c.compression=store -c.mac.identity=null",
+    "dist:linux": "npm run compile && electron-builder -l",
+    "mac": "npm run compile && electron-builder --mac",
+    "dist:mac": "npm run compile && electron-builder --mac",
+    "dist:mac:universal": "npm run compile && electron-builder --mac --universal"
+  },
+  "dependencies": {
+    "electron-updater": "^4.6.5",
+    "source-map-support": "^0.5.16"
+  },
+  "devDependencies": {
+    "electron": "8.2.0",
+    "electron-builder": "^22.4.1",
+    "electron-webpack": "^2.8.2",
+    "webpack": "~4.42.1"
+  },
+  "build": {
+    "appId": "org.ekoloko",
+    "productName": "ekoloko",
+    "compression": "maximum",
+    "afterPack": "./scripts/afterPack.js",
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "ekolokonet",
+        "repo": "ekoloko-desktop-app"
+      }
+    ],
+    "extraResources": [
+      "./assets/**"
+    ],
+    "win": {
+      "target": [
+        "nsis"
+      ],
+      "extraResources": [
+        "./plugins/x64/**"
+      ]
+    },
+    "linux": {
+      "target": [
+        "AppImage"
+      ],
+      "category": "Game",
+      "icon": "build/icon.png",
+      "extraResources": [
+        "./plugins/linux/**"
+      ]
+    },
+    "mac": {
+      "target": [
+        "zip"
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowElevation": false,
+      "allowToChangeInstallationDirectory": true,
+      "deleteAppDataOnUninstall": true,
+      "runAfterFinish": true
+    }
+  }
+}
