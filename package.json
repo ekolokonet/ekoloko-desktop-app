@@ -17,6 +17,7 @@
     "dist:mac:universal": "npm run compile && electron-builder --mac --universal"
   },
   "dependencies": {
+    "electron-updater": "4.3.9",
     "source-map-support": "^0.5.16"
   },
   "devDependencies": {

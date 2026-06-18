@@ -3,8 +3,7 @@ const { execFile } = require("child_process");
 const path = require("path");
 const fs = require("fs");
 
-const DEFAULT_LOGIN_URL = "https://prod.ekoloko.org/ekoloko/login.html";
-const MAC_LOGIN_URL = "https://play.ekoloko.org/ekoloko/login.html";
+const PUBLIC_LOGIN_URL = "https://play.ekoloko.org/ekoloko/login.html";
 const DISCORD_URL = "https://discord.gg/5uBSQx4yWa";
 const CONTROL_BAR_HEIGHT = 100;
 
@@ -61,7 +60,7 @@ function getAssetPath(filename) {
 }
 
 function getLoginUrl() {
-  return process.platform === "darwin" ? MAC_LOGIN_URL : DEFAULT_LOGIN_URL;
+  return PUBLIC_LOGIN_URL;
 }
 
 function getAssetDataUrl(filename) {
