@@ -580,6 +580,12 @@ function createWindow() {
   });
 
   win.setBrowserView(siteView);
+  // Paint the game view solid ekoloko green. Without this the BrowserView is
+  // transparent, so while a page is navigating it briefly reveals the control
+  // bar's gradient body underneath (propagated across the whole viewport),
+  // which reads as a "broken" stretched gradient. Matches the window bg and
+  // the light-mode value used by the dark-mode toggle below.
+  siteView.setBackgroundColor("#6aaa1e");
   setViewBounds();
 
   attachWebContentsLogging(siteView.webContents, "game");
