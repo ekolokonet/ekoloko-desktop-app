@@ -3,34 +3,63 @@ const { execFile } = require("child_process");
 const { autoUpdater } = require("electron-updater");
 const path = require("path");
 const fs = require("fs");
+const os = require("os");
+const logger = require("./logger");
 
 const LOGIN_URL = "https://play.ekoloko.org/ekoloko/login.html";
 const DISCORD_URL = "https://discord.gg/5uBSQx4yWa";
 const CONTROL_BAR_HEIGHT = 100;
+// Must match the bundled plugins/ DLLs. These are the CleanFlash 34.0.0.301
+// PPAPI *content-debugger* builds (kill-switch-free), which write trace()/error
+// output to flashlog.txt when mm.cfg enables it (see ensureFlashDebugConfig).
+const FLASH_VERSION = "34.0.0.301";
+
+// DevTools is gated behind a launch flag so support can open live Chrome
+// DevTools during a call (`ekoloko.exe --devtools`) without exposing it to
+// normal users. Logging happens regardless of this flag.
+const DEBUG_MODE =
+  process.argv.includes("--devtools") || process.argv.includes("--debug");
 
 let win;
 let siteView;
 let pluginName;
-let os;
+let osName;
 let isDarkMode = false;
 let darkModeCSSKey = null;
 
 switch (process.platform) {
   case "win32":
     pluginName = process.arch == "x64" ? "x64/pepflashplayer.dll" : "x32/pepflashplayer32.dll";
-    os = "windows";
+    osName = "windows";
     break;
   default:
     pluginName = "x64/pepflashplayer.dll";
     break;
 }
 
-app.commandLine.appendSwitch(
-  "ppapi-flash-path",
-  path.join(__dirname + "/../plugins/", pluginName)
-);
+// Resolve the bundled Flash plugin in both development and the packaged app.
+// Packaged: electron-builder copies plugins/ via extraResources to
+// <process.resourcesPath>/plugins (outside the asar). Dev: it lives at the
+// repo-root plugins/ folder, relative to the compiled main in dist/main.
+// (Mirrors getAssetPath() below.) The previous `__dirname + "/../plugins/"`
+// resolved to a non-existent path inside the asar, so Flash failed to load.
+function getPluginPath(rel) {
+  const candidates = [
+    path.join(process.resourcesPath || "", "plugins", rel),
+    path.join(__dirname, "..", "..", "plugins", rel),
+    path.join(__dirname, "..", "..", "..", "plugins", rel),
+    path.join(__dirname, "..", "plugins", rel),
+  ];
+  for (const p of candidates) {
+    if (fs.existsSync(p)) return p;
+  }
+  return candidates[0];
+}
 
-app.commandLine.appendSwitch("ppapi-flash-version", "32.0.0.371");
+const flashPluginPath = getPluginPath(pluginName);
+app.commandLine.appendSwitch("ppapi-flash-path", flashPluginPath);
+
+app.commandLine.appendSwitch("ppapi-flash-version", FLASH_VERSION);
 
 function getAssetPath(filename) {
   const candidates = [
@@ -258,6 +287,10 @@ function getControlPageHtml() {
 
           <div class="spacer"></div>
 
+          <button class="btn" id="saveLogsBtn" type="button">💾 שמירת לוגים</button>
+
+          <div class="spacer"></div>
+
           <button class="btn" id="darkModeBtn" type="button">🌙 מצב לילה</button>
 
           ${discordSrc
@@ -273,6 +306,7 @@ function getControlPageHtml() {
           const muteBtn = document.getElementById("muteBtn");
           const clearCache = document.getElementById("clearCache");
           const restartBtn = document.getElementById("restartBtn");
+          const saveLogsBtn = document.getElementById("saveLogsBtn");
           const darkModeBtn = document.getElementById("darkModeBtn");
           const openDiscord = document.getElementById("openDiscord");
           let muted = false;
@@ -318,6 +352,20 @@ function getControlPageHtml() {
 
           restartBtn.addEventListener("click", () => {
             ipcRenderer.send("restart");
+          });
+
+          let savingLogs = false;
+          saveLogsBtn.addEventListener("click", () => {
+            if (savingLogs) return;
+            savingLogs = true;
+            saveLogsBtn.textContent = "⏳ שומר...";
+            ipcRenderer.send("save-logs");
+          });
+
+          ipcRenderer.on("save-logs-done", (_event, ok) => {
+            savingLogs = false;
+            saveLogsBtn.textContent = ok ? "✓ נשמר!" : "✗ שגיאה";
+            setTimeout(() => { saveLogsBtn.textContent = "💾 שמירת לוגים"; }, 2500);
           });
 
           openDiscord.addEventListener("click", () => {
@@ -375,6 +423,134 @@ function openDiscordLink() {
   shell.openExternal(DISCORD_URL);
 }
 
+// Path the debug Flash player writes trace()/ActionScript error output to.
+function getFlashLogPath() {
+  switch (process.platform) {
+    case "win32":
+      return path.join(app.getPath("appData"), "Macromedia", "Flash Player", "Logs", "flashlog.txt");
+    case "darwin":
+      return path.join(os.homedir(), "Library", "Preferences", "Macromedia", "Flash Player", "Logs", "flashlog.txt");
+    default:
+      return path.join(os.homedir(), ".macromedia", "Flash_Player", "Logs", "flashlog.txt");
+  }
+}
+
+// Flash Player reads mm.cfg from the user's home directory at startup. These
+// flags make the *debug* player write trace()/error output to flashlog.txt.
+// SuppressDebuggerExceptionDialogs stops the debug player from popping
+// ActionScript-error dialogs at end users while still logging them.
+function ensureFlashDebugConfig() {
+  const mmCfgPath = path.join(os.homedir(), "mm.cfg");
+  const contents = [
+    "ErrorReportingEnable=1",
+    "TraceOutputFileEnable=1",
+    "MaxWarnings=0",
+    "SuppressDebuggerExceptionDialogs=1",
+    "",
+  ].join("\r\n");
+  try {
+    fs.writeFileSync(mmCfgPath, contents, "utf8");
+    logger.info("flash", `wrote mm.cfg at ${mmCfgPath}`);
+  } catch (e) {
+    logger.warn("flash", `could not write mm.cfg: ${(e && e.message) || e}`);
+  }
+
+  // The sandboxed PPAPI Flash process can write to an existing flashlog.txt but
+  // usually cannot CREATE the Logs directory tree itself. Pre-create the dir and
+  // an empty, world-writable flashlog.txt so the debug player's trace()/error
+  // output actually lands on disk.
+  try {
+    const flashLogPath = getFlashLogPath();
+    fs.mkdirSync(path.dirname(flashLogPath), { recursive: true });
+    if (!fs.existsSync(flashLogPath)) fs.writeFileSync(flashLogPath, "");
+    logger.info("flash", `flashlog ready at ${flashLogPath}`);
+  } catch (e) {
+    logger.warn("flash", `could not prepare flashlog dir: ${(e && e.message) || e}`);
+  }
+}
+
+// Assemble one shareable .txt (app log + flashlog) and let the user save it
+// wherever they like (defaulting to the Desktop) so they can send it to us.
+async function saveLogsBundle() {
+  const parts = [
+    logger.metadataHeader(),
+    "\n\n========== APP LOG ==========\n",
+    logger.getExportText(),
+    "\n\n========== FLASH LOG (flashlog.txt) ==========\n",
+  ];
+  const flashLogPath = getFlashLogPath();
+  try {
+    if (fs.existsSync(flashLogPath)) {
+      parts.push(fs.readFileSync(flashLogPath, "utf8"));
+    } else {
+      parts.push("(flashlog.txt not found — only produced by the debug Flash player)\n");
+    }
+  } catch (e) {
+    parts.push(`(could not read flashlog.txt: ${(e && e.message) || e})\n`);
+  }
+
+  const stamp = new Date().toISOString().replace(/[:.]/g, "-");
+  const { canceled, filePath } = await dialog.showSaveDialog(win, {
+    title: "שמירת לוגים",
+    defaultPath: path.join(app.getPath("desktop"), `ekoloko-logs-${stamp}.txt`),
+    filters: [{ name: "Log", extensions: ["txt"] }],
+  });
+  if (canceled || !filePath) {
+    logger.info("save-logs", "user cancelled the save dialog");
+    return false;
+  }
+
+  fs.writeFileSync(filePath, parts.join(""), "utf8");
+  logger.info("save-logs", `saved logs to ${filePath}`);
+  shell.showItemInFolder(filePath);
+  return true;
+}
+
+// Mirror a webContents' console + lifecycle/crash events into the log file so
+// the saved bundle reflects what actually happened in the game.
+function attachWebContentsLogging(wc, source) {
+  const levelName = (level) => ["INFO", "WARN", "ERROR", "INFO"][level] || "INFO";
+
+  wc.on("console-message", (_e, level, message, line, sourceId) => {
+    const where = sourceId ? ` (${sourceId}:${line})` : "";
+    logger.info(source, `console[${levelName(level)}]: ${message}${where}`);
+  });
+  wc.on("did-fail-load", (_e, code, desc, url) => {
+    logger.error(source, `did-fail-load ${code} ${desc} ${url || ""}`);
+  });
+  wc.on("did-fail-provisional-load", (_e, code, desc, url) => {
+    logger.error(source, `did-fail-provisional-load ${code} ${desc} ${url || ""}`);
+  });
+  wc.on("dom-ready", () => logger.info(source, "dom-ready"));
+  wc.on("did-finish-load", () => logger.info(source, "did-finish-load"));
+  wc.on("did-navigate", (_e, url) => logger.info(source, `did-navigate ${url}`));
+  // Electron 8 has no `render-process-gone` — use `crashed`.
+  wc.on("crashed", (_e, killed) => logger.error(source, `renderer crashed (killed=${killed})`));
+  wc.on("unresponsive", () => logger.warn(source, "unresponsive"));
+  wc.on("responsive", () => logger.info(source, "responsive"));
+  wc.on("plugin-crashed", (_e, name, version) =>
+    logger.error(source, `plugin-crashed: ${name} ${version}`)
+  );
+  wc.on("certificate-error", (_e, url, error) =>
+    logger.warn(source, `certificate-error ${error} ${url}`)
+  );
+}
+
+// When launched with --devtools, F12 / Ctrl+Shift+I toggle the game's DevTools.
+function attachDevtoolsShortcut(wc, targetWc) {
+  wc.on("before-input-event", (event, input) => {
+    if (input.type !== "keyDown") return;
+    const isF12 = input.key === "F12";
+    const isCtrlShiftI =
+      input.control && input.shift && String(input.key).toLowerCase() === "i";
+    if (isF12 || isCtrlShiftI) {
+      if (targetWc.isDevToolsOpened()) targetWc.closeDevTools();
+      else targetWc.openDevTools({ mode: "detach" });
+      event.preventDefault();
+    }
+  });
+}
+
 function createWindow() {
   win = new BrowserWindow({
     autoHideMenuBar: true,
@@ -382,7 +558,7 @@ function createWindow() {
     webPreferences: {
       nodeIntegration: true,
       contextIsolation: false,
-      devTools: false,
+      devTools: DEBUG_MODE,
       plugins: true,
     },
   });
@@ -397,7 +573,7 @@ function createWindow() {
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
-      devTools: false,
+      devTools: DEBUG_MODE,
       plugins: true,
       allowRunningInsecureContent: true,
     },
@@ -405,6 +581,19 @@ function createWindow() {
 
   win.setBrowserView(siteView);
   setViewBounds();
+
+  attachWebContentsLogging(siteView.webContents, "game");
+  attachWebContentsLogging(win.webContents, "control-bar");
+
+  if (DEBUG_MODE) {
+    logger.info("devtools", "launched with --devtools; DevTools enabled");
+    attachDevtoolsShortcut(siteView.webContents, siteView.webContents);
+    attachDevtoolsShortcut(win.webContents, siteView.webContents);
+    siteView.webContents.once("dom-ready", () => {
+      siteView.webContents.openDevTools({ mode: "detach" });
+    });
+  }
+
   siteView.webContents.loadURL(LOGIN_URL);
   siteView.webContents.setAudioMuted(false);
 
@@ -503,11 +692,18 @@ function initAutoUpdater() {
   if (!app.isPackaged || process.platform === "darwin") return;
 
   autoUpdater.autoDownload = true;
-  autoUpdater.on("error", () => {
-    /* never let a failed update check disrupt the game */
+  autoUpdater.on("error", (err) => {
+    // never let a failed update check disrupt the game, but record it
+    logger.error("updater", (err && err.message) || String(err));
   });
+  autoUpdater.on("checking-for-update", () => logger.info("updater", "checking for update"));
+  autoUpdater.on("update-available", (info) =>
+    logger.info("updater", `update available: ${(info && info.version) || "?"}`)
+  );
+  autoUpdater.on("update-not-available", () => logger.info("updater", "no update available"));
 
   autoUpdater.on("update-downloaded", (info) => {
+    logger.info("updater", `update downloaded: ${(info && info.version) || "?"}`);
     const response = dialog.showMessageBoxSync(win, {
       type: "info",
       buttons: ["Later", "Restart now"],
@@ -528,6 +724,22 @@ function initAutoUpdater() {
 }
 
 app.whenReady().then(() => {
+  logger.init({ flashVersion: FLASH_VERSION });
+  logger.info("app", `ekoloko starting (debugMode=${DEBUG_MODE})`);
+  logger.info(
+    "flash",
+    `ppapi-flash v${FLASH_VERSION} path=${flashPluginPath} exists=${fs.existsSync(flashPluginPath)}`
+  );
+
+  process.on("uncaughtException", (err) => {
+    logger.error("uncaughtException", (err && err.stack) || String(err));
+  });
+  process.on("unhandledRejection", (reason) => {
+    logger.error("unhandledRejection", (reason && reason.stack) || String(reason));
+  });
+
+  ensureFlashDebugConfig();
+
   createAppMenu();
   createWindow();
   initAutoUpdater();
@@ -562,6 +774,18 @@ app.whenReady().then(() => {
   ipcMain.on("clear-cache", async () => {
     if (siteView) {
       await siteView.webContents.session.clearCache();
+    }
+  });
+
+  ipcMain.on("save-logs", async () => {
+    let ok = false;
+    try {
+      ok = await saveLogsBundle();
+    } catch (e) {
+      logger.error("save-logs", (e && e.stack) || String(e));
+    }
+    if (win && !win.isDestroyed()) {
+      win.webContents.send("save-logs-done", ok);
     }
   });
 

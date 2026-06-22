@@ -3,6 +3,8 @@
   "version": "1.0.0",
   "author": "Arnon001 <support@arnon.games>",
   "description": "Application for ekoloko",
+  "private": true,
+  "license": "SEE LICENSE IN LICENSE",
   "repository": {
     "type": "git",
     "url": "https://github.com/ekolokonet/ekoloko-desktop-app.git"
