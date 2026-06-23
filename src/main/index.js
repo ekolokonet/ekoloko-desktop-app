@@ -1,66 +1,91 @@
 const { app, BrowserWindow, BrowserView, Menu, dialog, ipcMain, shell } = require("electron");
 const { execFile } = require("child_process");
+const { autoUpdater } = require("electron-updater");
 const path = require("path");
 const fs = require("fs");
+const os = require("os");
+const logger = require("./logger");
 
-const PUBLIC_LOGIN_URL = "https://play.ekoloko.org/ekoloko/login.html";
+const LOGIN_URL = "https://play.ekoloko.org/ekoloko/login.html";
 const DISCORD_URL = "https://discord.gg/5uBSQx4yWa";
 const CONTROL_BAR_HEIGHT = 100;
+const FLASH_VERSION = process.platform === "darwin" ? "32.0.0.371" : "34.0.0.301";
+
+// DevTools is gated behind a launch flag so support can open live Chrome
+// DevTools during a call (`ekoloko.exe --devtools`) without exposing it to
+// normal users. Logging happens regardless of this flag.
+const DEBUG_MODE =
+  process.argv.includes("--devtools") || process.argv.includes("--debug");
 
 let win;
 let siteView;
+let pluginName;
+let osName;
 let isDarkMode = false;
 let darkModeCSSKey = null;
 
-const resourcePathCache = new Map();
-function getResourcePath(...segments) {
-  const key = segments.join("/");
-  if (resourcePathCache.has(key)) return resourcePathCache.get(key);
+switch (process.platform) {
+  case "win32":
+    pluginName = process.arch == "x64" ? "x64/pepflashplayer.dll" : "x32/pepflashplayer32.dll";
+    osName = "windows";
+    break;
+  case "darwin":
+    pluginName = "mac/PepperFlashPlayer.plugin";
+    osName = "mac";
+    break;
+  case "linux":
+    pluginName = "linux/libpepflashplayer.so";
+    osName = "linux";
+    break;
+  default:
+    pluginName = null;
+    break;
+}
+
+// Normal launches use the release Flash player; only --devtools/--debug loads
+// the content-debugger build from the parallel "-debug" folder
+// (e.g. "x64/pepflashplayer.dll" -> "x64-debug/pepflashplayer.dll").
+if (DEBUG_MODE && process.platform === "win32") {
+  pluginName = pluginName.replace(/^(x\d+)\//, "$1-debug/");
+}
+
+// Resolve the bundled Flash plugin in both development and the packaged app.
+// Packaged: electron-builder copies plugins/ via extraResources to
+// <process.resourcesPath>/plugins (outside the asar). Dev: it lives at the
+// repo-root plugins/ folder, relative to the compiled main in dist/main.
+// (Mirrors getAssetPath() below.) The previous `__dirname + "/../plugins/"`
+// resolved to a non-existent path inside the asar, so Flash failed to load.
+function getPluginPath(rel) {
   const candidates = [
-    path.join(process.resourcesPath || "", ...segments),
-    path.join(__dirname, "..", ...segments),
-    path.join(__dirname, "..", "..", ...segments),
-    path.join(__dirname, "..", "..", "..", ...segments),
+    path.join(process.resourcesPath || "", "plugins", rel),
+    path.join(__dirname, "..", "..", "plugins", rel),
+    path.join(__dirname, "..", "..", "..", "plugins", rel),
+    path.join(__dirname, "..", "plugins", rel),
   ];
   for (const p of candidates) {
-    if (fs.existsSync(p)) {
-      resourcePathCache.set(key, p);
-      return p;
-    }
+    if (fs.existsSync(p)) return p;
   }
-  resourcePathCache.set(key, null);
-  return null;
+  return candidates[0];
 }
 
-function getFlashPluginName() {
-  switch (process.platform) {
-    case "win32":
-      return process.arch === "x64" ? "x64/pepflashplayer.dll" : "x32/pepflashplayer32.dll";
-    case "linux":
-      return "linux/libpepflashplayer.so";
-    case "darwin":
-      return "mac/PepperFlashPlayer.plugin";
-    default:
-      return null;
-  }
-}
-
-const flashPluginName = getFlashPluginName();
-const flashPluginPath = flashPluginName ? getResourcePath("plugins", flashPluginName) : null;
-
+const flashPluginPath = pluginName ? getPluginPath(pluginName) : null;
 if (flashPluginPath) {
   app.commandLine.appendSwitch("ppapi-flash-path", flashPluginPath);
-  app.commandLine.appendSwitch("ppapi-flash-version", "32.0.0.371");
+  app.commandLine.appendSwitch("ppapi-flash-version", FLASH_VERSION);
 } else {
-  console.warn(`Pepper Flash plugin not found for ${process.platform}`);
+  console.warn(`Pepper Flash plugin not configured for ${process.platform}`);
 }
 
 function getAssetPath(filename) {
-  return getResourcePath("assets", filename);
-}
-
-function getLoginUrl() {
-  return PUBLIC_LOGIN_URL;
+  const candidates = [
+    path.join(process.resourcesPath || "", "assets", filename),
+    path.join(__dirname, "..", "..", "assets", filename),
+    path.join(__dirname, "..", "..", "..", "assets", filename),
+  ];
+  for (const p of candidates) {
+    if (fs.existsSync(p)) return p;
+  }
+  return null;
 }
 
 function getAssetDataUrl(filename) {
@@ -83,13 +108,11 @@ function getAssetFontUrl(filename) {
   }
 }
 
-let controlPageHtml = null;
 function getControlPageHtml() {
-  if (controlPageHtml) return controlPageHtml;
   const logoSrc = getAssetDataUrl("3.png");
   const discordSrc = getAssetDataUrl("d-1.png");
   const fontSrc = getAssetFontUrl("Gan CLM Bold.ttf");
-  const html = `
+  return `
     <!doctype html>
     <html>
       <head>
@@ -279,6 +302,10 @@ function getControlPageHtml() {
 
           <div class="spacer"></div>
 
+          <button class="btn" id="saveLogsBtn" type="button">💾 שמירת לוגים</button>
+
+          <div class="spacer"></div>
+
           <button class="btn" id="darkModeBtn" type="button">🌙 מצב לילה</button>
 
           ${discordSrc
@@ -294,6 +321,7 @@ function getControlPageHtml() {
           const muteBtn = document.getElementById("muteBtn");
           const clearCache = document.getElementById("clearCache");
           const restartBtn = document.getElementById("restartBtn");
+          const saveLogsBtn = document.getElementById("saveLogsBtn");
           const darkModeBtn = document.getElementById("darkModeBtn");
           const openDiscord = document.getElementById("openDiscord");
           let muted = false;
@@ -341,6 +369,20 @@ function getControlPageHtml() {
             ipcRenderer.send("restart");
           });
 
+          let savingLogs = false;
+          saveLogsBtn.addEventListener("click", () => {
+            if (savingLogs) return;
+            savingLogs = true;
+            saveLogsBtn.textContent = "⏳ שומר...";
+            ipcRenderer.send("save-logs");
+          });
+
+          ipcRenderer.on("save-logs-done", (_event, ok) => {
+            savingLogs = false;
+            saveLogsBtn.textContent = ok ? "✓ נשמר!" : "✗ שגיאה";
+            setTimeout(() => { saveLogsBtn.textContent = "💾 שמירת לוגים"; }, 2500);
+          });
+
           openDiscord.addEventListener("click", () => {
             ipcRenderer.send("open-discord");
           });
@@ -351,21 +393,13 @@ function getControlPageHtml() {
       </body>
     </html>
   `;
-  controlPageHtml = html;
-  return html;
-}
-
-let controlHtmlPath = null;
-function getControlPagePath() {
-  if (!controlHtmlPath) {
-    controlHtmlPath = path.join(app.getPath("temp"), "ekoloko-control.html");
-    fs.writeFileSync(controlHtmlPath, getControlPageHtml(), "utf8");
-  }
-  return controlHtmlPath;
 }
 
 function setViewBounds() {
-  if (!win || !siteView) return;
+  if (!win || !siteView) {
+    return;
+  }
+
   const bounds = win.getContentBounds();
   siteView.setBounds({
     x: 0,
@@ -373,6 +407,8 @@ function setViewBounds() {
     width: bounds.width,
     height: Math.max(0, bounds.height - CONTROL_BAR_HEIGHT),
   });
+
+  siteView.setAutoResize({ width: true, height: true });
 }
 
 async function applyZoom(zoomFactor) {
@@ -402,6 +438,134 @@ function openDiscordLink() {
   shell.openExternal(DISCORD_URL);
 }
 
+// Path the debug Flash player writes trace()/ActionScript error output to.
+function getFlashLogPath() {
+  switch (process.platform) {
+    case "win32":
+      return path.join(app.getPath("appData"), "Macromedia", "Flash Player", "Logs", "flashlog.txt");
+    case "darwin":
+      return path.join(os.homedir(), "Library", "Preferences", "Macromedia", "Flash Player", "Logs", "flashlog.txt");
+    default:
+      return path.join(os.homedir(), ".macromedia", "Flash_Player", "Logs", "flashlog.txt");
+  }
+}
+
+// Flash Player reads mm.cfg from the user's home directory at startup. These
+// flags make the *debug* player write trace()/error output to flashlog.txt.
+// SuppressDebuggerExceptionDialogs stops the debug player from popping
+// ActionScript-error dialogs at end users while still logging them.
+function ensureFlashDebugConfig() {
+  const mmCfgPath = path.join(os.homedir(), "mm.cfg");
+  const contents = [
+    "ErrorReportingEnable=1",
+    "TraceOutputFileEnable=1",
+    "MaxWarnings=0",
+    "SuppressDebuggerExceptionDialogs=1",
+    "",
+  ].join("\r\n");
+  try {
+    fs.writeFileSync(mmCfgPath, contents, "utf8");
+    logger.info("flash", `wrote mm.cfg at ${mmCfgPath}`);
+  } catch (e) {
+    logger.warn("flash", `could not write mm.cfg: ${(e && e.message) || e}`);
+  }
+
+  // The sandboxed PPAPI Flash process can write to an existing flashlog.txt but
+  // usually cannot CREATE the Logs directory tree itself. Pre-create the dir and
+  // an empty, world-writable flashlog.txt so the debug player's trace()/error
+  // output actually lands on disk.
+  try {
+    const flashLogPath = getFlashLogPath();
+    fs.mkdirSync(path.dirname(flashLogPath), { recursive: true });
+    if (!fs.existsSync(flashLogPath)) fs.writeFileSync(flashLogPath, "");
+    logger.info("flash", `flashlog ready at ${flashLogPath}`);
+  } catch (e) {
+    logger.warn("flash", `could not prepare flashlog dir: ${(e && e.message) || e}`);
+  }
+}
+
+// Assemble one shareable .txt (app log + flashlog) and let the user save it
+// wherever they like (defaulting to the Desktop) so they can send it to us.
+async function saveLogsBundle() {
+  const parts = [
+    logger.metadataHeader(),
+    "\n\n========== APP LOG ==========\n",
+    logger.getExportText(),
+    "\n\n========== FLASH LOG (flashlog.txt) ==========\n",
+  ];
+  const flashLogPath = getFlashLogPath();
+  try {
+    if (fs.existsSync(flashLogPath)) {
+      parts.push(fs.readFileSync(flashLogPath, "utf8"));
+    } else {
+      parts.push("(flashlog.txt not found — only produced by the debug Flash player)\n");
+    }
+  } catch (e) {
+    parts.push(`(could not read flashlog.txt: ${(e && e.message) || e})\n`);
+  }
+
+  const stamp = new Date().toISOString().replace(/[:.]/g, "-");
+  const { canceled, filePath } = await dialog.showSaveDialog(win, {
+    title: "שמירת לוגים",
+    defaultPath: path.join(app.getPath("desktop"), `ekoloko-logs-${stamp}.txt`),
+    filters: [{ name: "Log", extensions: ["txt"] }],
+  });
+  if (canceled || !filePath) {
+    logger.info("save-logs", "user cancelled the save dialog");
+    return false;
+  }
+
+  fs.writeFileSync(filePath, parts.join(""), "utf8");
+  logger.info("save-logs", `saved logs to ${filePath}`);
+  shell.showItemInFolder(filePath);
+  return true;
+}
+
+// Mirror a webContents' console + lifecycle/crash events into the log file so
+// the saved bundle reflects what actually happened in the game.
+function attachWebContentsLogging(wc, source) {
+  const levelName = (level) => ["INFO", "WARN", "ERROR", "INFO"][level] || "INFO";
+
+  wc.on("console-message", (_e, level, message, line, sourceId) => {
+    const where = sourceId ? ` (${sourceId}:${line})` : "";
+    logger.info(source, `console[${levelName(level)}]: ${message}${where}`);
+  });
+  wc.on("did-fail-load", (_e, code, desc, url) => {
+    logger.error(source, `did-fail-load ${code} ${desc} ${url || ""}`);
+  });
+  wc.on("did-fail-provisional-load", (_e, code, desc, url) => {
+    logger.error(source, `did-fail-provisional-load ${code} ${desc} ${url || ""}`);
+  });
+  wc.on("dom-ready", () => logger.info(source, "dom-ready"));
+  wc.on("did-finish-load", () => logger.info(source, "did-finish-load"));
+  wc.on("did-navigate", (_e, url) => logger.info(source, `did-navigate ${url}`));
+  // Electron 8 has no `render-process-gone` — use `crashed`.
+  wc.on("crashed", (_e, killed) => logger.error(source, `renderer crashed (killed=${killed})`));
+  wc.on("unresponsive", () => logger.warn(source, "unresponsive"));
+  wc.on("responsive", () => logger.info(source, "responsive"));
+  wc.on("plugin-crashed", (_e, name, version) =>
+    logger.error(source, `plugin-crashed: ${name} ${version}`)
+  );
+  wc.on("certificate-error", (_e, url, error) =>
+    logger.warn(source, `certificate-error ${error} ${url}`)
+  );
+}
+
+// When launched with --devtools, F12 / Ctrl+Shift+I toggle the game's DevTools.
+function attachDevtoolsShortcut(wc, targetWc) {
+  wc.on("before-input-event", (event, input) => {
+    if (input.type !== "keyDown") return;
+    const isF12 = input.key === "F12";
+    const isCtrlShiftI =
+      input.control && input.shift && String(input.key).toLowerCase() === "i";
+    if (isF12 || isCtrlShiftI) {
+      if (targetWc.isDevToolsOpened()) targetWc.closeDevTools();
+      else targetWc.openDevTools({ mode: "detach" });
+      event.preventDefault();
+    }
+  });
+}
+
 function createWindow() {
   win = new BrowserWindow({
     autoHideMenuBar: true,
@@ -409,30 +573,49 @@ function createWindow() {
     webPreferences: {
       nodeIntegration: true,
       contextIsolation: false,
-      devTools: false,
+      devTools: DEBUG_MODE,
       plugins: true,
     },
   });
 
   win.maximize();
 
-  win.loadFile(getControlPagePath());
+  const controlHtmlPath = path.join(app.getPath("temp"), `ekoloko-control-${Date.now()}.html`);
+  fs.writeFileSync(controlHtmlPath, getControlPageHtml(), "utf8");
+  win.loadFile(controlHtmlPath);
 
   siteView = new BrowserView({
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
-      devTools: false,
+      devTools: DEBUG_MODE,
       plugins: true,
       allowRunningInsecureContent: true,
-      partition: "nopersist",
     },
   });
 
   win.setBrowserView(siteView);
-  siteView.setAutoResize({ width: true, height: true });
+  // Paint the game view solid ekoloko green. Without this the BrowserView is
+  // transparent, so while a page is navigating it briefly reveals the control
+  // bar's gradient body underneath (propagated across the whole viewport),
+  // which reads as a "broken" stretched gradient. Matches the window bg and
+  // the light-mode value used by the dark-mode toggle below.
+  siteView.setBackgroundColor("#6aaa1e");
   setViewBounds();
-  siteView.webContents.loadURL(getLoginUrl());
+
+  attachWebContentsLogging(siteView.webContents, "game");
+  attachWebContentsLogging(win.webContents, "control-bar");
+
+  if (DEBUG_MODE) {
+    logger.info("devtools", "launched with --devtools; DevTools enabled");
+    attachDevtoolsShortcut(siteView.webContents, siteView.webContents);
+    attachDevtoolsShortcut(win.webContents, siteView.webContents);
+    siteView.webContents.once("dom-ready", () => {
+      siteView.webContents.openDevTools({ mode: "detach" });
+    });
+  }
+
+  siteView.webContents.loadURL(LOGIN_URL);
   siteView.webContents.setAudioMuted(false);
 
   siteView.webContents.on("new-window", (event, url) => {
@@ -522,9 +705,67 @@ function createAppMenu() {
   );
 }
 
+function initAutoUpdater() {
+  // Auto-update pulls each new GitHub Release from the public repo (see the
+  // `publish` provider in package.json). Only meaningful in packaged builds.
+  // macOS is skipped: the app is unsigned, and Squirrel.Mac refuses to apply
+  // updates to an unsigned bundle. Windows + Linux update silently.
+  if (!app.isPackaged || process.platform === "darwin") return;
+
+  autoUpdater.autoDownload = true;
+  autoUpdater.on("error", (err) => {
+    // never let a failed update check disrupt the game, but record it
+    logger.error("updater", (err && err.message) || String(err));
+  });
+  autoUpdater.on("checking-for-update", () => logger.info("updater", "checking for update"));
+  autoUpdater.on("update-available", (info) =>
+    logger.info("updater", `update available: ${(info && info.version) || "?"}`)
+  );
+  autoUpdater.on("update-not-available", () => logger.info("updater", "no update available"));
+
+  autoUpdater.on("update-downloaded", (info) => {
+    logger.info("updater", `update downloaded: ${(info && info.version) || "?"}`);
+    const response = dialog.showMessageBoxSync(win, {
+      type: "info",
+      buttons: ["Later", "Restart now"],
+      defaultId: 1,
+      cancelId: 0,
+      title: "Update ready",
+      message: "A new version of ekoloko is ready to install.",
+      detail: `Version ${info && info.version ? info.version : ""} will be applied after restart.`,
+    });
+    if (response === 1) {
+      autoUpdater.quitAndInstall();
+    }
+  });
+
+  autoUpdater.checkForUpdates().catch(() => {});
+  // Re-check periodically for long-running sessions.
+  setInterval(() => autoUpdater.checkForUpdates().catch(() => {}), 6 * 60 * 60 * 1000);
+}
+
 app.whenReady().then(() => {
+  logger.init({ flashVersion: FLASH_VERSION });
+  logger.info("app", `ekoloko starting (debugMode=${DEBUG_MODE})`);
+  logger.info(
+    "flash",
+    `ppapi-flash v${FLASH_VERSION} path=${flashPluginPath} exists=${fs.existsSync(flashPluginPath)}`
+  );
+
+  process.on("uncaughtException", (err) => {
+    logger.error("uncaughtException", (err && err.stack) || String(err));
+  });
+  process.on("unhandledRejection", (reason) => {
+    logger.error("unhandledRejection", (reason && reason.stack) || String(reason));
+  });
+
+  // Only configure Flash trace/error logging when launched in debug mode; normal
+  // users run the plain release player with no mm.cfg / flashlog side effects.
+  if (DEBUG_MODE) ensureFlashDebugConfig();
+
   createAppMenu();
   createWindow();
+  initAutoUpdater();
 
   ipcMain.on("zoom-change", async (_event, zoomFactor) => {
     await applyZoom(zoomFactor);
@@ -556,6 +797,18 @@ app.whenReady().then(() => {
   ipcMain.on("clear-cache", async () => {
     if (siteView) {
       await siteView.webContents.session.clearCache();
+    }
+  });
+
+  ipcMain.on("save-logs", async () => {
+    let ok = false;
+    try {
+      ok = await saveLogsBundle();
+    } catch (e) {
+      logger.error("save-logs", (e && e.stack) || String(e));
+    }
+    if (win && !win.isDestroyed()) {
+      win.webContents.send("save-logs-done", ok);
     }
   });
 

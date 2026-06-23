@@ -1,8 +1,14 @@
 {
   "name": "ekoloko-rewritten",
-  "version": "1.0.0",
+  "version": "1.0.13",
   "author": "Arnon001 <support@arnon.games>",
   "description": "Application for ekoloko",
+  "private": true,
+  "license": "SEE LICENSE IN LICENSE",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ekolokonet/ekoloko-desktop-app.git"
+  },
   "scripts": {
     "dev": "node scripts/withLegacyOpenSSL.js electron-webpack dev",
     "compile": "node scripts/withLegacyOpenSSL.js electron-webpack",
@@ -32,19 +38,37 @@
     "compression": "maximum",
     "asar": true,
     "afterPack": "./scripts/afterPack.js",
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "ekolokonet",
+        "repo": "ekoloko-desktop-app"
+      }
+    ],
     "extraResources": [
       "./assets/**"
     ],
     "win": {
+      "target": [
+        "nsis"
+      ],
       "extraResources": [
-        "./plugins/x64/**"
+        "./plugins/x64/**",
+        "./plugins/x64-debug/**"
       ],
       "certificateFile": "${env.WIN_CSC_LINK}",
       "certificatePassword": "${env.WIN_CSC_KEY_PASSWORD}",
-      "signingHashAlgorithms": ["sha256"],
+      "signingHashAlgorithms": [
+        "sha256"
+      ],
       "rfc3161TimeStampServer": "http://timestamp.digicert.com"
     },
     "linux": {
+      "target": [
+        "AppImage"
+      ],
+      "category": "Game",
+      "icon": "build/icon.png",
       "extraResources": [
         "./assets/**",
         "./plugins/linux/**"
@@ -65,6 +89,8 @@
       "entitlementsInherit": "build/entitlements.mac.plist"
     },
     "nsis": {
+      "artifactName": "${productName}-Setup-${version}.${ext}",
+      "include": "build/installer.nsh",
       "oneClick": false,
       "perMachine": false,
       "allowElevation": false,
