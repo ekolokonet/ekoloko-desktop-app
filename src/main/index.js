@@ -9,9 +9,11 @@ const logger = require("./logger");
 const LOGIN_URL = "https://play.ekoloko.org/ekoloko/login.html";
 const DISCORD_URL = "https://discord.gg/5uBSQx4yWa";
 const CONTROL_BAR_HEIGHT = 100;
-// Must match the bundled plugins/ DLLs. These are the CleanFlash 34.0.0.301
-// PPAPI *content-debugger* builds (kill-switch-free), which write trace()/error
-// output to flashlog.txt when mm.cfg enables it (see ensureFlashDebugConfig).
+// Must match the bundled plugins/ DLLs. We ship CleanFlash 34.0.0.301
+// (kill-switch-free) PPAPI players: the plain release build in plugins/x64
+// (used by normal launches) and the content-debugger build in plugins/x64-debug
+// (used only with --devtools; it writes trace()/error output to flashlog.txt
+// when mm.cfg enables it — see DEBUG_MODE and ensureFlashDebugConfig).
 const FLASH_VERSION = "34.0.0.301";
 
 // DevTools is gated behind a launch flag so support can open live Chrome
@@ -35,6 +37,13 @@ switch (process.platform) {
   default:
     pluginName = "x64/pepflashplayer.dll";
     break;
+}
+
+// Normal launches use the release Flash player; only --devtools/--debug loads
+// the content-debugger build from the parallel "-debug" folder
+// (e.g. "x64/pepflashplayer.dll" -> "x64-debug/pepflashplayer.dll").
+if (DEBUG_MODE) {
+  pluginName = pluginName.replace(/^(x\d+)\//, "$1-debug/");
 }
 
 // Resolve the bundled Flash plugin in both development and the packaged app.
@@ -744,7 +753,9 @@ app.whenReady().then(() => {
     logger.error("unhandledRejection", (reason && reason.stack) || String(reason));
   });
 
-  ensureFlashDebugConfig();
+  // Only configure Flash trace/error logging when launched in debug mode; normal
+  // users run the plain release player with no mm.cfg / flashlog side effects.
+  if (DEBUG_MODE) ensureFlashDebugConfig();
 
   createAppMenu();
   createWindow();

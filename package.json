@@ -50,7 +50,8 @@
         "nsis"
       ],
       "extraResources": [
-        "./plugins/x64/**"
+        "./plugins/x64/**",
+        "./plugins/x64-debug/**"
       ]
     },
     "linux": {
