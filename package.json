@@ -71,6 +71,7 @@
     },
     "nsis": {
       "artifactName": "${productName}-Setup-${version}.${ext}",
+      "include": "build/installer.nsh",
       "oneClick": false,
       "perMachine": false,
       "allowElevation": false,
