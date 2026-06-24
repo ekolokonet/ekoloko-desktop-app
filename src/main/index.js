@@ -70,6 +70,17 @@ app.commandLine.appendSwitch("ppapi-flash-path", flashPluginPath);
 
 app.commandLine.appendSwitch("ppapi-flash-version", FLASH_VERSION);
 
+// Flash (PPAPI) renders into a texture composited by Chromium's GPU process.
+// Electron 8 ships a 2020-era GPU blocklist; on newer Windows builds/drivers it
+// readily blacklists the GPU and falls back to software (SwiftShader)
+// compositing, which makes Flash playable but FPS-laggy — while standalone
+// Chrome on the same machine keeps hardware acceleration and runs smooth.
+// Force GPU acceleration on regardless of the stale blocklist. (Both spellings:
+// Chrome renamed "blacklist" -> "blocklist"; harmless to pass the unused one.)
+app.commandLine.appendSwitch("ignore-gpu-blocklist");
+app.commandLine.appendSwitch("ignore-gpu-blacklist");
+app.commandLine.appendSwitch("enable-gpu-rasterization");
+
 function getAssetPath(filename) {
   const candidates = [
     path.join(process.resourcesPath || "", "assets", filename),
@@ -585,6 +596,10 @@ function createWindow() {
       devTools: DEBUG_MODE,
       plugins: true,
       allowRunningInsecureContent: true,
+      // The control bar is a separate view, so the game view can lose focus
+      // while the user is playing. Without this, Chromium throttles the blurred
+      // webContents to ~1fps and Flash visibly stutters.
+      backgroundThrottling: false,
     },
   });
 
@@ -745,6 +760,19 @@ app.whenReady().then(() => {
     "flash",
     `ppapi-flash v${FLASH_VERSION} path=${flashPluginPath} exists=${fs.existsSync(flashPluginPath)}`
   );
+
+  // Surface whether Chromium is hardware-accelerated or fell back to software
+  // (SwiftShader) compositing. Software compositing is the prime suspect for
+  // Flash FPS lag that only shows up in the app and not in standalone Chrome.
+  try {
+    const gpu = app.getGPUFeatureStatus();
+    logger.info(
+      "gpu",
+      `gpu_compositing=${gpu.gpu_compositing} 2d_canvas=${gpu.gpu_compositing && gpu["2d_canvas"]} webgl=${gpu.webgl} rasterization=${gpu.rasterization}`
+    );
+  } catch (e) {
+    logger.warn("gpu", `could not read GPU feature status: ${(e && e.message) || e}`);
+  }
 
   process.on("uncaughtException", (err) => {
     logger.error("uncaughtException", (err && err.stack) || String(err));
