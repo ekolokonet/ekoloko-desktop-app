@@ -790,7 +790,16 @@ app.whenReady().then(() => {
 
   ipcMain.on("clear-cache", async () => {
     if (siteView) {
+      // clearCache() only drops the HTTP cache. The game's preload_assets.js
+      // stashes the SWFs in localStorage for 24h offline use, and a corrupt or
+      // over-quota entry there renders a blank screen that survives restarts and
+      // the old cache-only clear. Wipe the persistent stores too, then reload so
+      // the page re-fetches everything fresh.
       await siteView.webContents.session.clearCache();
+      await siteView.webContents.session.clearStorageData({
+        storages: ["localstorage", "indexdb", "serviceworkers", "cachestorage"],
+      });
+      siteView.webContents.reload();
     }
   });
 
