@@ -17,8 +17,7 @@
     "dist:dir": "npm run dist -- --dir -c.compression=store -c.mac.identity=null",
     "dist:linux": "npm run compile && electron-builder -l",
     "mac": "npm run compile && electron-builder --mac",
-    "dist:mac": "npm run compile && electron-builder --mac",
-    "dist:mac:universal": "npm run compile && electron-builder --mac --universal"
+    "dist:mac": "npm run compile && electron-builder --mac"
   },
   "dependencies": {
     "electron-updater": "4.3.9",
@@ -66,8 +65,14 @@
     },
     "mac": {
       "target": [
-        "zip"
-      ]
+        {
+          "target": "dmg",
+          "arch": "x64"
+        }
+      ],
+      "category": "public.app-category.games",
+      "icon": "build/icon.png",
+      "identity": null
     },
     "nsis": {
       "artifactName": "${productName}-Setup-${version}.${ext}",
