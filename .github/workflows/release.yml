@@ -47,6 +47,26 @@ jobs:
       - name: Install dependencies
         run: npm install
 
+      # electron-builder 22.4.1's DMG builder hardcodes Python 2 (/usr/bin/python),
+      # which macos-14 no longer ships, so `--mac` dies with "spawn /usr/bin/python
+      # ENOENT". The vendored dmgbuild is already py3-shimmed (mac_alias/ds_store/
+      # biplist all branch on the Python version) except for core.py's two py2-only
+      # top lines, and every dep is pure-Python (no pip needed). So just point it at
+      # the Command-Line-Tools python3 (always present, 3.9, still has plistlib.Data)
+      # and drop the py2 cruft. Self-checks so an upstream string change can't no-op.
+      - name: Patch dmg-builder for Python 3 (macOS)
+        if: runner.os == 'macOS'
+        run: |
+          set -euo pipefail
+          dmg_js="node_modules/dmg-builder/out/dmg.js"
+          core_py="node_modules/dmg-builder/vendor/dmgbuild/core.py"
+          test -f "$dmg_js" && test -f "$core_py"
+          sed -i '' 's#"/usr/bin/python"#"/usr/bin/python3"#' "$dmg_js"
+          sed -i '' -e '/^reload(sys)/s/^/# /' -e '/^sys\.setdefaultencoding/s/^/# /' "$core_py"
+          grep -q '"/usr/bin/python3"' "$dmg_js"
+          ! grep -qE '^reload\(sys\)|^sys\.setdefaultencoding' "$core_py"
+          echo "✓ dmg-builder patched to use /usr/bin/python3"
+
       - name: Set release version (1.0.<run number>)
         run: npm version "1.0.${{ github.run_number }}" --no-git-tag-version --allow-same-version
 
