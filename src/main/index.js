@@ -5,6 +5,7 @@ const path = require("path");
 const fs = require("fs");
 const os = require("os");
 const logger = require("./logger");
+const appVolume = require("./appVolume");
 
 const LOGIN_URL = "https://play.ekoloko.org/ekoloko/login.html";
 const DISCORD_URL = "https://discord.gg/5uBSQx4yWa";
@@ -160,7 +161,9 @@ function getControlPageHtml() {
           }
 
           .panel {
-            flex-shrink: 0;
+            /* Panels give up width first (buttons are flex-shrink: 0) so the
+               bar still fits everything on 1366px-wide laptop screens. */
+            flex-shrink: 1;
             background: #3a6fd8;
             border-radius: 14px;
             border: 3px solid #2a55c0;
@@ -168,7 +171,7 @@ function getControlPageHtml() {
             display: flex;
             flex-direction: column;
             gap: 6px;
-            min-width: 180px;
+            min-width: 140px;
           }
 
           .panel-label {
@@ -186,6 +189,9 @@ function getControlPageHtml() {
 
           input[type="range"] {
             flex: 1;
+            /* Allow the track to compress below its ~129px intrinsic width,
+               otherwise a shrunk panel overflows instead of narrowing. */
+            min-width: 56px;
             cursor: pointer;
             -webkit-appearance: none;
             appearance: none;
@@ -295,7 +301,13 @@ function getControlPageHtml() {
 
           <div class="spacer"></div>
 
-          <button class="btn" id="muteBtn" type="button">🔊 קול</button>
+          <div class="panel">
+            <div class="panel-label" id="volumeLabel">🔊 עוצמת קול</div>
+            <div class="slider-row">
+              <input id="volume" type="range" min="0" max="1" step="0.01" value="1" />
+              <div class="val" id="volumeValue">100%</div>
+            </div>
+          </div>
 
           <div class="spacer"></div>
 
@@ -323,13 +335,14 @@ function getControlPageHtml() {
 
           const zoom = document.getElementById("zoom");
           const zoomValue = document.getElementById("zoomValue");
-          const muteBtn = document.getElementById("muteBtn");
+          const volume = document.getElementById("volume");
+          const volumeValue = document.getElementById("volumeValue");
+          const volumeLabel = document.getElementById("volumeLabel");
           const clearCache = document.getElementById("clearCache");
           const restartBtn = document.getElementById("restartBtn");
           const saveLogsBtn = document.getElementById("saveLogsBtn");
           const darkModeBtn = document.getElementById("darkModeBtn");
           const openDiscord = document.getElementById("openDiscord");
-          let muted = false;
           let dark = false;
 
           function formatPercent(value) {
@@ -349,12 +362,16 @@ function getControlPageHtml() {
             ipcRenderer.send("zoom-change", Number(zoom.value));
           });
 
-          muteBtn.addEventListener("click", () => {
-            muted = !muted;
-            muteBtn.textContent = muted ? "🔇 מושתק" : "🔊 קול";
-            muteBtn.style.background = muted ? "linear-gradient(180deg,#e05050 0%,#c03030 100%)" : "";
-            muteBtn.style.borderBottomColor = muted ? "#8b0000" : "";
-            ipcRenderer.send("mute-toggle", muted);
+          function updateVolumeUI() {
+            const v = Number(volume.value);
+            volumeValue.textContent = formatPercent(volume.value);
+            setSliderFill(volume);
+            volumeLabel.textContent = (v === 0 ? "🔇" : v < 0.5 ? "🔉" : "🔊") + " עוצמת קול";
+          }
+
+          volume.addEventListener("input", () => {
+            updateVolumeUI();
+            ipcRenderer.send("volume-change", Number(volume.value));
           });
 
           clearCache.addEventListener("click", () => {
@@ -394,6 +411,7 @@ function getControlPageHtml() {
 
           zoomValue.textContent = formatPercent(zoom.value);
           setSliderFill(zoom);
+          updateVolumeUI();
         </script>
       </body>
     </html>
@@ -434,9 +452,14 @@ async function applyDarkModeCSS(isDark) {
   }
 }
 
-function applyMute(muted) {
-  if (!siteView) return;
-  siteView.webContents.setAudioMuted(muted);
+// Chromium only exposes a boolean mute per webContents and the game's sound
+// comes from the Flash plugin (no HTML5 media to script a volume onto), so
+// the in-between range is applied at the OS mixer level by appVolume. The
+// hard mute here guarantees 0% is silent on every platform, including macOS
+// where no per-app OS volume API exists.
+function applyVolume(volume) {
+  if (siteView) siteView.webContents.setAudioMuted(volume <= 0);
+  appVolume.set(volume);
 }
 
 function openDiscordLink() {
@@ -793,8 +816,8 @@ app.whenReady().then(() => {
     await applyZoom(zoomFactor);
   });
 
-  ipcMain.on("mute-toggle", (_event, muted) => {
-    applyMute(muted);
+  ipcMain.on("volume-change", (_event, volume) => {
+    applyVolume(Number(volume));
   });
 
   ipcMain.on("restart", () => {
@@ -850,4 +873,8 @@ app.whenReady().then(() => {
 
 app.on("window-all-closed", function () {
   if (process.platform !== "darwin") app.quit();
+});
+
+app.on("will-quit", () => {
+  appVolume.dispose();
 });
