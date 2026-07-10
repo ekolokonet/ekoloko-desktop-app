@@ -20,6 +20,9 @@ const backgroundPath = path.join(rootDir, "build", "dmg-background.png");
 const stageDir = path.join(os.tmpdir(), `${appName}-dmg-stage-${process.pid}`);
 const rwDmg = path.join(os.tmpdir(), `${appName}-${version}-mac-rw-${process.pid}.dmg`);
 const finalDmg = path.join(distDir, `${appName}-${version}-mac.dmg`);
+const windowBounds = { left: 120, top: 90, width: 768, height: 512 };
+const appIconPosition = { x: 224, y: 383 };
+const applicationsIconPosition = { x: 543, y: 383 };
 
 function run(command, args, options = {}) {
   return execFileSync(command, args, {
@@ -79,13 +82,13 @@ function styleMountedVolume(mountDir) {
         set current view of container window to icon view
         set toolbar visible of container window to false
         set statusbar visible of container window to false
-        set bounds of container window to {120, 90, 880, 570}
+        set bounds of container window to {${windowBounds.left}, ${windowBounds.top}, ${windowBounds.left + windowBounds.width}, ${windowBounds.top + windowBounds.height}}
         set theViewOptions to the icon view options of container window
         set arrangement of theViewOptions to not arranged
         set icon size of theViewOptions to 96
         set background picture of theViewOptions to POSIX file "${background}"
-        set position of item "${escapeAppleScriptString(`${appName}.app`)}" of container window to {190, 292}
-        set position of item "Applications" of container window to {570, 292}
+        set position of item "${escapeAppleScriptString(`${appName}.app`)}" of container window to {${appIconPosition.x}, ${appIconPosition.y}}
+        set position of item "Applications" of container window to {${applicationsIconPosition.x}, ${applicationsIconPosition.y}}
         close
         open
         update without registering applications
