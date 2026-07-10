@@ -51,9 +51,15 @@ jobs:
       # which macos-14 no longer ships, so `--mac` dies with "spawn /usr/bin/python
       # ENOENT". The vendored dmgbuild is already py3-shimmed (mac_alias/ds_store/
       # biplist all branch on the Python version) except for core.py's two py2-only
-      # top lines, and every dep is pure-Python (no pip needed). So just point it at
-      # the Command-Line-Tools python3 (always present, 3.9, still has plistlib.Data)
-      # and drop the py2 cruft. Self-checks so an upstream string change can't no-op.
+      # top lines, and every dep is pure-Python (no pip needed).
+      #
+      # Second gotcha: macos-14 is an Apple-Silicon (arm64) runner, so a native
+      # python3 makes mac_alias load the libc symbol statfs$INODE64 -- which only
+      # exists in the Intel (x86_64) libc -- and dmgbuild dies with
+      # "dlsym(...statfs$INODE64): symbol not found". Fix: run python3 through
+      # Rosetta as x86_64 (where every $INODE64 symbol resolves) via a wrapper,
+      # and point dmg.js at that wrapper. Self-checks so an upstream string
+      # change can't silently no-op the patch.
       - name: Patch dmg-builder for Python 3 (macOS)
         if: runner.os == 'macOS'
         run: |
@@ -61,11 +67,23 @@ jobs:
           dmg_js="node_modules/dmg-builder/out/dmg.js"
           core_py="node_modules/dmg-builder/vendor/dmgbuild/core.py"
           test -f "$dmg_js" && test -f "$core_py"
-          sed -i '' 's#"/usr/bin/python"#"/usr/bin/python3"#' "$dmg_js"
+
+          # Ensure Rosetta 2 is available so `arch -x86_64` can launch the
+          # Intel slice of the universal /usr/bin/python3 (no-op if present).
+          softwareupdate --install-rosetta --agree-to-license || true
+
+          wrapper="$RUNNER_TEMP/py3-x64.sh"
+          printf '#!/bin/bash\nexec arch -x86_64 /usr/bin/python3 "$@"\n' > "$wrapper"
+          chmod +x "$wrapper"
+
+          sed -i '' "s#\"/usr/bin/python\"#\"$wrapper\"#" "$dmg_js"
           sed -i '' -e '/^reload(sys)/s/^/# /' -e '/^sys\.setdefaultencoding/s/^/# /' "$core_py"
-          grep -q '"/usr/bin/python3"' "$dmg_js"
+          grep -qF "$wrapper" "$dmg_js"
           ! grep -qE '^reload\(sys\)|^sys\.setdefaultencoding' "$core_py"
-          echo "✓ dmg-builder patched to use /usr/bin/python3"
+
+          # Sanity check the wrapper actually loads the previously-missing symbol.
+          "$wrapper" -c "import ctypes; ctypes.CDLL('libSystem.dylib')['statfs\$INODE64']"
+          echo "✓ dmg-builder patched to run python3 as x86_64 (Rosetta)"
 
       - name: Set release version (1.0.<run number>)
         run: npm version "1.0.${{ github.run_number }}" --no-git-tag-version --allow-same-version
