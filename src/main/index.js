@@ -15,7 +15,7 @@ const CONTROL_BAR_HEIGHT = 100;
 // (used by normal launches) and the content-debugger build in plugins/x64-debug
 // (used only with --devtools; it writes trace()/error output to flashlog.txt
 // when mm.cfg enables it — see DEBUG_MODE and ensureFlashDebugConfig).
-const FLASH_VERSION = "34.0.0.301";
+const FLASH_VERSION = process.platform === "darwin" ? "32.0.0.371" : "34.0.0.301";
 
 // DevTools is gated behind a launch flag so support can open live Chrome
 // DevTools during a call (`ekoloko.exe --devtools`) without exposing it to
@@ -34,6 +34,14 @@ switch (process.platform) {
   case "win32":
     pluginName = process.arch == "x64" ? "x64/pepflashplayer.dll" : "x32/pepflashplayer32.dll";
     osName = "windows";
+    break;
+  case "darwin":
+    pluginName = "mac/PepperFlashPlayer.plugin";
+    osName = "mac";
+    break;
+  case "linux":
+    pluginName = "linux/libpepflashplayer.so";
+    osName = "linux";
     break;
   default:
     pluginName = "x64/pepflashplayer.dll";
@@ -246,6 +254,10 @@ function getControlPageHtml() {
 
           .spacer { width: 10px; flex-shrink: 0; }
 
+          /* Push the fullscreen button to the far right of the bar. The reserved
+             right margin clears the absolutely-positioned Discord icon. */
+          .btn-fullscreen { margin-left: auto; margin-right: ${discordSrc ? "84px" : "0"}; }
+
           .btn-icon {
             position: absolute;
             top: 6px;
@@ -292,16 +304,6 @@ function getControlPageHtml() {
           ${logoSrc ? `<img class="logo-img" src="${logoSrc}" alt="ekoloko" />` : ""}
 
           <div class="panel">
-            <div class="panel-label">זום</div>
-            <div class="slider-row">
-              <input id="zoom" type="range" min="0.5" max="2" step="0.05" value="1" />
-              <div class="val" id="zoomValue">100%</div>
-            </div>
-          </div>
-
-          <div class="spacer"></div>
-
-          <div class="panel">
             <div class="panel-label" id="volumeLabel">🔊 עוצמת קול</div>
             <div class="slider-row">
               <input id="volume" type="range" min="0" max="1" step="0.01" value="1" />
@@ -325,6 +327,8 @@ function getControlPageHtml() {
 
           <button class="btn" id="darkModeBtn" type="button">🌙 מצב לילה</button>
 
+          <button class="btn btn-fullscreen" id="fullscreenBtn" type="button">⛶ מסך מלא</button>
+
           ${discordSrc
             ? `<button class="btn-icon" id="openDiscord" type="button" title="דיסקורד"><img src="${discordSrc}" alt="דיסקורד" /></button>`
             : `<button class="btn" id="openDiscord" type="button">דיסקורד</button>`
@@ -333,8 +337,7 @@ function getControlPageHtml() {
         <script>
           const { ipcRenderer } = require("electron");
 
-          const zoom = document.getElementById("zoom");
-          const zoomValue = document.getElementById("zoomValue");
+          const fullscreenBtn = document.getElementById("fullscreenBtn");
           const volume = document.getElementById("volume");
           const volumeValue = document.getElementById("volumeValue");
           const volumeLabel = document.getElementById("volumeLabel");
@@ -356,10 +359,12 @@ function getControlPageHtml() {
             input.style.setProperty("--fill", pct + "%");
           }
 
-          zoom.addEventListener("input", () => {
-            zoomValue.textContent = formatPercent(zoom.value);
-            setSliderFill(zoom);
-            ipcRenderer.send("zoom-change", Number(zoom.value));
+          fullscreenBtn.addEventListener("click", () => {
+            ipcRenderer.send("toggle-fullscreen");
+          });
+
+          ipcRenderer.on("fullscreen-changed", (_event, isFull) => {
+            fullscreenBtn.textContent = isFull ? "🗗 יציאה ממסך מלא" : "⛶ מסך מלא";
           });
 
           function updateVolumeUI() {
@@ -409,8 +414,6 @@ function getControlPageHtml() {
             ipcRenderer.send("open-discord");
           });
 
-          zoomValue.textContent = formatPercent(zoom.value);
-          setSliderFill(zoom);
           updateVolumeUI();
         </script>
       </body>
@@ -432,11 +435,6 @@ function setViewBounds() {
   });
 
   siteView.setAutoResize({ width: true, height: true });
-}
-
-async function applyZoom(zoomFactor) {
-  if (!siteView) return;
-  await siteView.webContents.setZoomFactor(zoomFactor);
 }
 
 async function applyDarkModeCSS(isDark) {
@@ -671,10 +669,19 @@ function createWindow() {
   });
 
   siteView.webContents.on("did-finish-load", () => {
+    // Keep the game at a fixed 100% zoom; Chromium otherwise persists the
+    // per-origin zoom factor across loads.
+    siteView.webContents.setZoomFactor(1);
     if (isDarkMode) applyDarkModeCSS(true);
   });
 
   win.on("resize", setViewBounds);
+  win.on("enter-full-screen", () => {
+    if (win) win.webContents.send("fullscreen-changed", true);
+  });
+  win.on("leave-full-screen", () => {
+    if (win) win.webContents.send("fullscreen-changed", false);
+  });
   win.on("closed", () => {
     win = null;
     siteView = null;
@@ -812,8 +819,9 @@ app.whenReady().then(() => {
   createWindow();
   initAutoUpdater();
 
-  ipcMain.on("zoom-change", async (_event, zoomFactor) => {
-    await applyZoom(zoomFactor);
+  ipcMain.on("toggle-fullscreen", () => {
+    if (!win) return;
+    win.setFullScreen(!win.isFullScreen());
   });
 
   ipcMain.on("volume-change", (_event, volume) => {

@@ -1,7 +1,7 @@
 {
   "name": "ekoloko-rewritten",
-  "version": "1.0.0",
-  "author": "Arnon001 <arnon@arnon001.com>",
+  "version": "1.0.20",
+  "author": "Arnon001 <support@arnon001.com>",
   "description": "Application for ekoloko",
   "private": true,
   "license": "SEE LICENSE IN LICENSE",
@@ -16,8 +16,11 @@
     "dist": "npm run compile && electron-builder",
     "dist:dir": "npm run dist -- --dir -c.compression=store -c.mac.identity=null",
     "dist:linux": "npm run compile && electron-builder -l",
-    "mac": "npm run compile && electron-builder --mac",
-    "dist:mac": "npm run compile && electron-builder --mac"
+    "mac": "npm run compile && electron-builder --mac zip --x64 -c.mac.identity=null",
+    "dist:mac": "npm run compile && electron-builder --mac zip --x64 -c.mac.identity=null",
+    "dist:mac:dmg": "npm run dist:mac && node scripts/createMacDmg.js",
+    "dist:mac:dir": "npm run compile && electron-builder --mac --x64 --dir -c.compression=store -c.mac.identity=null",
+    "dist:mac:universal": "npm run compile && electron-builder --mac --universal"
   },
   "dependencies": {
     "electron-updater": "4.3.9",
@@ -33,6 +36,7 @@
     "appId": "org.ekoloko",
     "productName": "ekoloko",
     "compression": "maximum",
+    "asar": true,
     "afterPack": "./scripts/afterPack.js",
     "publish": [
       {
@@ -60,19 +64,23 @@
       "category": "Game",
       "icon": "build/icon.png",
       "extraResources": [
+        "./assets/**",
         "./plugins/linux/**"
       ]
     },
     "mac": {
       "target": [
-        {
-          "target": "dmg",
-          "arch": "x64"
-        }
+        "zip"
       ],
-      "category": "public.app-category.games",
-      "icon": "build/icon.png",
-      "identity": null
+      "extraResources": [
+        "./plugins/mac/**"
+      ],
+      "icon": "build/icon.icns",
+      "identity": "${env.APPLE_IDENTITY}",
+      "hardenedRuntime": true,
+      "gatekeeperAssess": false,
+      "entitlements": "build/entitlements.mac.plist",
+      "entitlementsInherit": "build/entitlements.mac.plist"
     },
     "nsis": {
       "artifactName": "${productName}-Setup-${version}.${ext}",

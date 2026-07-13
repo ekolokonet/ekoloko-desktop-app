@@ -111,25 +111,25 @@ jobs:
             dist/*.yml
             dist/*.blockmap
 
-  release:
-    needs: build
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-    steps:
-      - name: Download all build artifacts
-        uses: actions/download-artifact@v4
-        with:
-          path: artifacts
-          merge-multiple: true
+  # release:
+  #   needs: build
+  #   runs-on: ubuntu-latest
+  #   permissions:
+  #     contents: write
+  #   steps:
+  #     - name: Download all build artifacts
+  #       uses: actions/download-artifact@v4
+  #       with:
+  #         path: artifacts
+  #         merge-multiple: true
 
-      - name: Publish GitHub Release
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          gh release create "v1.0.${{ github.run_number }}" artifacts/* \
-            --repo "${{ github.repository }}" \
-            --target "${{ github.sha }}" \
-            --title "ekoloko v1.0.${{ github.run_number }}" \
-            --notes "Automated release from commit ${{ github.sha }}." \
-            --latest
+  #     - name: Publish GitHub Release
+  #       env:
+  #         GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  #       run: |
+  #         gh release create "v1.0.${{ github.run_number }}" artifacts/* \
+  #           --repo "${{ github.repository }}" \
+  #           --target "${{ github.sha }}" \
+  #           --title "ekoloko v1.0.${{ github.run_number }}" \
+  #           --notes "Automated release from commit ${{ github.sha }}." \
+  #           --latest
