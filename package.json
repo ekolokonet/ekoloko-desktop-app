@@ -64,7 +64,6 @@
       "category": "Game",
       "icon": "build/icon.png",
       "extraResources": [
-        "./assets/**",
         "./plugins/linux/**"
       ]
     },
