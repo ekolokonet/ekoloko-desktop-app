@@ -15,7 +15,14 @@ const CONTROL_BAR_HEIGHT = 100;
 // (used by normal launches) and the content-debugger build in plugins/x64-debug
 // (used only with --devtools; it writes trace()/error output to flashlog.txt
 // when mm.cfg enables it — see DEBUG_MODE and ensureFlashDebugConfig).
-const FLASH_VERSION = process.platform === "darwin" ? "32.0.0.371" : "34.0.0.301";
+const FLASH_VERSION =
+  process.platform === "darwin"
+    ? "32.0.0.371"
+    : process.platform === "linux"
+    ? "34.0.0.137"
+    : "34.0.0.301";
+
+
 
 // DevTools is gated behind a launch flag so support can open live Chrome
 // DevTools during a call (`ekoloko.exe --devtools`) without exposing it to
