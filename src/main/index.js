@@ -44,7 +44,7 @@ switch (process.platform) {
     osName = "linux";
     break;
   default:
-    pluginName = "x64/pepflashplayer.dll";
+    pluginName = "linux/libpepflashplayer.so";
     break;
 }
 
