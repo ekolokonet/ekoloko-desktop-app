@@ -81,7 +81,7 @@ function getPluginPath(rel) {
   return candidates[0];
 }
 
-const flashPluginPath = getPluginPath(pluginName);
+const flashPluginPath = path.resolve(getPluginPath(pluginName));
 app.commandLine.appendSwitch("ppapi-flash-path", flashPluginPath);
 
 app.commandLine.appendSwitch("ppapi-flash-version", FLASH_VERSION);
@@ -95,7 +95,19 @@ app.commandLine.appendSwitch("ppapi-flash-version", FLASH_VERSION);
 // Chrome renamed "blacklist" -> "blocklist"; harmless to pass the unused one.)
 app.commandLine.appendSwitch("ignore-gpu-blocklist");
 app.commandLine.appendSwitch("ignore-gpu-blacklist");
-app.commandLine.appendSwitch("enable-gpu-rasterization");
+
+if (process.platform === "linux") {
+  // Disabling sandboxing on Linux prevents modern kernel/glibc sandbox restrictions
+  // from blocking libpepflashplayer.so PPAPI plugin initialization.
+  app.commandLine.appendSwitch("no-sandbox");
+  app.commandLine.appendSwitch("disable-ppapi-sandbox");
+  app.commandLine.appendSwitch("disable-gpu-sandbox");
+  app.commandLine.appendSwitch("disable-seccomp-filter-sandbox");
+  // GPU rasterization in Chromium 80 causes visual artifacts and flickering on modern Linux Mesa/Wayland drivers
+  app.commandLine.appendSwitch("disable-gpu-rasterization");
+} else {
+  app.commandLine.appendSwitch("enable-gpu-rasterization");
+}
 
 function getAssetPath(filename) {
   const candidates = [
