@@ -10,8 +10,9 @@
     "url": "https://github.com/ekolokonet/ekoloko-desktop-app.git"
   },
   "scripts": {
-    "dev": "set NODE_OPTIONS=--openssl-legacy-provider && electron-webpack dev",
-    "compile": "set NODE_OPTIONS=--openssl-legacy-provider && electron-webpack",
+    "start": "cross-env NODE_OPTIONS=\"-r ./scripts/patch-crypto.js\" electron-webpack dev",
+    "dev": "cross-env NODE_OPTIONS=\"-r ./scripts/patch-crypto.js\" electron-webpack dev",
+    "compile": "cross-env NODE_OPTIONS=\"-r ./scripts/patch-crypto.js\" electron-webpack",
     "build": "npm run compile && electron-builder",
     "dist": "npm run compile && electron-builder",
     "dist:dir": "npm run dist -- --dir -c.compression=store -c.mac.identity=null",
@@ -27,6 +28,7 @@
     "source-map-support": "^0.5.16"
   },
   "devDependencies": {
+    "cross-env": "^7.0.3",
     "electron": "8.2.0",
     "electron-builder": "^22.4.1",
     "electron-webpack": "^2.8.2",
@@ -58,6 +60,7 @@
       ]
     },
     "linux": {
+      "executableName": "ekoloko",
       "target": [
         "AppImage"
       ],
