@@ -6,10 +6,20 @@ const fs = require("fs");
 const os = require("os");
 const logger = require("./logger");
 const appVolume = require("./appVolume");
+const discordPresence = require("./discordPresence");
+const roomNames = require("./roomNames");
 
+// const LOGIN_URL = "https://ekobeta.arnon001.com/ekoloko/login.html";
 const LOGIN_URL = "https://play.ekoloko.org/ekoloko/login.html";
 const DISCORD_URL = "https://discord.gg/5uBSQx4yWa";
+
+// Discord application id for Rich Presence, from the Discord Developer Portal
+// (https://discord.com/developers/applications -> New Application -> copy the
+// "Application ID"). Empty string keeps the whole presence feature disabled.
+// See docs/DISCORD_PRESENCE.md for setup + the art asset keys.
+const DISCORD_CLIENT_ID = "1529879266370523206";
 const CONTROL_BAR_HEIGHT = 100;
+
 // Must match the bundled plugins/ DLLs. We ship CleanFlash 34.0.0.301
 // (kill-switch-free) PPAPI players: the plain release build in plugins/x64
 // (used by normal launches) and the content-debugger build in plugins/x64-debug
@@ -30,12 +40,50 @@ const FLASH_VERSION =
 const DEBUG_MODE =
   process.argv.includes("--devtools") || process.argv.includes("--debug");
 
+// DevTools itself (plus the F12 / Ctrl+Shift+I toggle) is also always
+// available in dev runs, without the flag's other side effects (debug Flash
+// player, mm.cfg, auto-open).
+const DEVTOOLS_ENABLED = DEBUG_MODE || !app.isPackaged;
+
 let win;
 let siteView;
 let pluginName;
 let osName;
 let isDarkMode = false;
 let darkModeCSSKey = null;
+
+// Discord Rich Presence state. The privacy switch defaults to OFF so a fresh
+// install never broadcasts a kid's username/in-game location — with it off the
+// presence is just "playing ekoloko". The game page reports username/room via
+// the presence preload bridge (see getPresencePreloadJs).
+let presenceShowDetails = false;
+let presenceUsername = "";
+let presenceRoom = "";
+let presenceSessionStart = null;
+
+// Tiny persisted settings file (userData/settings.json). Only the presence
+// privacy switch lives here for now; unknown keys are preserved.
+function getSettingsPath() {
+  return path.join(app.getPath("userData"), "settings.json");
+}
+
+function readSettings() {
+  try {
+    return JSON.parse(fs.readFileSync(getSettingsPath(), "utf8")) || {};
+  } catch (e) {
+    return {};
+  }
+}
+
+function saveSetting(key, value) {
+  const settings = readSettings();
+  settings[key] = value;
+  try {
+    fs.writeFileSync(getSettingsPath(), JSON.stringify(settings, null, 2), "utf8");
+  } catch (e) {
+    logger.warn("settings", `could not save settings: ${(e && e.message) || e}`);
+  }
+}
 
 switch (process.platform) {
   case "win32":
@@ -127,6 +175,67 @@ function getAssetFontUrl(filename) {
   } catch (e) {
     return "";
   }
+}
+
+// Preload for the game BrowserView. The site is remote and untrusted, so it
+// only gets a single, narrow, validated bridge: window.electronPresence. The
+// game page (login.html defines window.ekolokoPresence, which the SWF calls
+// via ExternalInterface on login/room changes) pushes {username, room} here.
+// Like the control page, this is written to a temp file at startup because
+// electron-webpack bundles src/main into one file and a preload must be a
+// real file on disk.
+function getPresencePreloadJs() {
+  return `
+    const { contextBridge, ipcRenderer } = require("electron");
+
+    function cleanString(value, maxLength) {
+      if (typeof value !== "string") return "";
+      // strip control characters, collapse whitespace, cap length
+      return value.replace(/[\\u0000-\\u001f\\u007f]/g, "").replace(/\\s+/g, " ").trim().slice(0, maxLength);
+    }
+
+    contextBridge.exposeInMainWorld("electronPresence", {
+      update(data) {
+        if (!data || typeof data !== "object") return;
+        ipcRenderer.send("presence-update", {
+          username: cleanString(data.username, 64),
+          room: cleanString(data.room, 100),
+        });
+      },
+      clear() {
+        ipcRenderer.send("presence-clear");
+      },
+    });
+  `;
+}
+
+// Discord activity text is Hebrew to match the game. "details" is the top
+// line, "state" the second. Discord caps both at 128 chars — the preload
+// already caps the inputs well below that.
+function buildPresenceActivity() {
+  const activity = {
+    assets: { large_image: "cover", large_text: "ekoloko" },
+    timestamps: { start: presenceSessionStart || Date.now() },
+  };
+  if (presenceShowDetails && presenceUsername) {
+    activity.details = `משחק בתור ${presenceUsername}`;
+    if (presenceRoom) {
+      // The game reports the SFS room name (usually a numeric id); map it to the
+      // Hebrew display name where known. Unmapped rooms (house instances,
+      // minigames) show a generic "exploring the map" line instead of a raw id.
+      const friendly = roomNames[presenceRoom];
+      activity.state = friendly ? `נמצא ב${friendly}` : "מסייר במפה";
+    }
+  } else {
+    activity.details = "משחק באקולוקו";
+  }
+  return activity;
+}
+
+function updatePresenceActivity() {
+  if (!DISCORD_CLIENT_ID) return;
+  if (!presenceSessionStart) presenceSessionStart = Date.now();
+  discordPresence.setActivity(buildPresenceActivity());
 }
 
 function getControlPageHtml() {
@@ -334,6 +443,12 @@ function getControlPageHtml() {
 
           <button class="btn" id="darkModeBtn" type="button">🌙 מצב לילה</button>
 
+          ${DISCORD_CLIENT_ID
+            ? `<div class="spacer"></div>
+
+          <button class="btn" id="presenceBtn" type="button" title="מה חברים רואים בדיסקורד: שם ומיקום במשחק, או אנונימי">${presenceShowDetails ? "🎮 דיסקורד: שם ומיקום" : "🔒 דיסקורד: אנונימי"}</button>`
+            : ""}
+
           <button class="btn btn-fullscreen" id="fullscreenBtn" type="button">⛶ מסך מלא</button>
 
           ${discordSrc
@@ -421,6 +536,16 @@ function getControlPageHtml() {
             ipcRenderer.send("open-discord");
           });
 
+          const presenceBtn = document.getElementById("presenceBtn");
+          if (presenceBtn) {
+            let presenceDetails = ${presenceShowDetails ? "true" : "false"};
+            presenceBtn.addEventListener("click", () => {
+              presenceDetails = !presenceDetails;
+              presenceBtn.textContent = presenceDetails ? "🎮 דיסקורד: שם ומיקום" : "🔒 דיסקורד: אנונימי";
+              ipcRenderer.send("presence-details-toggle", presenceDetails);
+            });
+          }
+
           updateVolumeUI();
         </script>
       </body>
@@ -470,6 +595,62 @@ function applyVolume(volume) {
 function openDiscordLink() {
   shell.openExternal(DISCORD_URL);
 }
+
+// ---- TEMP dev-only debug overlay -------------------------------------------
+// Draws a small live log box over the game view so presence flow can be watched
+// without DevTools: game console lines, presence IPC arrivals, Discord RPC
+// state, and each SET_ACTIVITY actually sent. Active only when DevTools are
+// enabled (dev runs / --devtools); packaged release builds never show it.
+// Remove once the Discord presence feature is verified.
+function getDebugOverlayJs() {
+  return `
+    (function () {
+      if (window.__ekoDebugLog) return;
+      var box = document.createElement("div");
+      box.style.cssText = "position:fixed;top:8px;left:8px;z-index:2147483647;" +
+        "background:rgba(0,0,0,0.78);color:#8f8;font:11px/1.5 Menlo,Consolas,monospace;" +
+        "padding:6px 10px;border-radius:6px;max-width:62vw;pointer-events:none;" +
+        "white-space:pre-wrap;word-break:break-all;direction:ltr;text-align:left";
+      (document.body || document.documentElement).appendChild(box);
+      var lines = [];
+      window.__ekoDebugLog = function (line) {
+        lines.push(new Date().toISOString().slice(11, 19) + " " + line);
+        if (lines.length > 14) lines.shift();
+        box.textContent = lines.join("\\n");
+      };
+      window.__ekoDebugLog("debug overlay ready");
+    })();
+  `;
+}
+
+function pushDebug(line) {
+  if (!DEVTOOLS_ENABLED || !siteView) return;
+  try {
+    siteView.webContents
+      .executeJavaScript(`window.__ekoDebugLog && window.__ekoDebugLog(${JSON.stringify(String(line))})`)
+      .catch(() => {});
+  } catch (e) {
+    /* ignore */
+  }
+}
+
+// Logger passthrough that also mirrors lines onto the overlay; handed to
+// discordPresence so its connect/SET_ACTIVITY lines show up on screen.
+const overlayLogger = {
+  info(tag, msg) {
+    logger.info(tag, msg);
+    pushDebug(`[${tag}] ${msg}`);
+  },
+  warn(tag, msg) {
+    logger.warn(tag, msg);
+    pushDebug(`[${tag}] WARN ${msg}`);
+  },
+  error(tag, msg) {
+    logger.error(tag, msg);
+    pushDebug(`[${tag}] ERROR ${msg}`);
+  },
+};
+// ---- end TEMP debug overlay ------------------------------------------------
 
 // Path the debug Flash player writes trace()/ActionScript error output to.
 function getFlashLogPath() {
@@ -562,6 +743,8 @@ function attachWebContentsLogging(wc, source) {
   wc.on("console-message", (_e, level, message, line, sourceId) => {
     const where = sourceId ? ` (${sourceId}:${line})` : "";
     logger.info(source, `console[${levelName(level)}]: ${message}${where}`);
+    // TEMP debug overlay: echo the game's console onto the on-screen box.
+    if (source === "game") pushDebug(`console: ${String(message).slice(0, 160)}`);
   });
   wc.on("did-fail-load", (_e, code, desc, url) => {
     logger.error(source, `did-fail-load ${code} ${desc} ${url || ""}`);
@@ -584,13 +767,16 @@ function attachWebContentsLogging(wc, source) {
   );
 }
 
-// When launched with --devtools, F12 / Ctrl+Shift+I toggle the game's DevTools.
+// F12 / Ctrl+Shift+I / Cmd+Shift+I (macOS) toggle the game's DevTools.
+// (Cmd+Shift+I, not Cmd+Alt+I: macOS's default menu already owns Alt+Cmd+I and
+// menu accelerators win over before-input-event, but they target the focused
+// window — usually the control bar — instead of the game view.)
 function attachDevtoolsShortcut(wc, targetWc) {
   wc.on("before-input-event", (event, input) => {
     if (input.type !== "keyDown") return;
     const isF12 = input.key === "F12";
     const isCtrlShiftI =
-      input.control && input.shift && String(input.key).toLowerCase() === "i";
+      (input.control || input.meta) && input.shift && String(input.key).toLowerCase() === "i";
     if (isF12 || isCtrlShiftI) {
       if (targetWc.isDevToolsOpened()) targetWc.closeDevTools();
       else targetWc.openDevTools({ mode: "detach" });
@@ -606,7 +792,7 @@ function createWindow() {
     webPreferences: {
       nodeIntegration: true,
       contextIsolation: false,
-      devTools: DEBUG_MODE,
+      devTools: DEVTOOLS_ENABLED,
       plugins: true,
     },
   });
@@ -617,12 +803,16 @@ function createWindow() {
   fs.writeFileSync(controlHtmlPath, getControlPageHtml(), "utf8");
   win.loadFile(controlHtmlPath);
 
+  const presencePreloadPath = path.join(app.getPath("temp"), `ekoloko-presence-preload-${Date.now()}.js`);
+  fs.writeFileSync(presencePreloadPath, getPresencePreloadJs(), "utf8");
+
   siteView = new BrowserView({
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
-      devTools: DEBUG_MODE,
+      devTools: DEVTOOLS_ENABLED,
       plugins: true,
+      preload: presencePreloadPath,
       allowRunningInsecureContent: true,
       // The control bar is a separate view, so the game view can lose focus
       // while the user is playing. Without this, Chromium throttles the blurred
@@ -643,10 +833,13 @@ function createWindow() {
   attachWebContentsLogging(siteView.webContents, "game");
   attachWebContentsLogging(win.webContents, "control-bar");
 
-  if (DEBUG_MODE) {
-    logger.info("devtools", "launched with --devtools; DevTools enabled");
+  if (DEVTOOLS_ENABLED) {
     attachDevtoolsShortcut(siteView.webContents, siteView.webContents);
     attachDevtoolsShortcut(win.webContents, siteView.webContents);
+  }
+
+  if (DEBUG_MODE) {
+    logger.info("devtools", "launched with --devtools; DevTools enabled");
     siteView.webContents.once("dom-ready", () => {
       siteView.webContents.openDevTools({ mode: "detach" });
     });
@@ -680,6 +873,10 @@ function createWindow() {
     // per-origin zoom factor across loads.
     siteView.webContents.setZoomFactor(1);
     if (isDarkMode) applyDarkModeCSS(true);
+    // TEMP debug overlay (dev only) — re-inject after every navigation.
+    if (DEVTOOLS_ENABLED) {
+      siteView.webContents.executeJavaScript(getDebugOverlayJs()).catch(() => {});
+    }
   });
 
   win.on("resize", setViewBounds);
@@ -822,9 +1019,21 @@ app.whenReady().then(() => {
   // users run the plain release player with no mm.cfg / flashlog side effects.
   if (DEBUG_MODE) ensureFlashDebugConfig();
 
+  // Load the persisted privacy switch before the control bar HTML is generated
+  // so the button renders in the right state.
+  presenceShowDetails = readSettings().presenceShowDetails === true;
+
   createAppMenu();
   createWindow();
   initAutoUpdater();
+
+  // Rich presence starts as the generic "playing ekoloko" activity right away;
+  // username/room only ever show after the game reports them AND the privacy
+  // switch is on.
+  if (DISCORD_CLIENT_ID) {
+    discordPresence.init(DISCORD_CLIENT_ID, overlayLogger);
+    updatePresenceActivity();
+  }
 
   ipcMain.on("toggle-fullscreen", () => {
     if (!win) return;
@@ -852,6 +1061,40 @@ app.whenReady().then(() => {
 
   ipcMain.on("open-discord", () => {
     openDiscordLink();
+  });
+
+  // From the game BrowserView's presence preload. Only trust the game view —
+  // popup windows load arbitrary external URLs and have no business setting
+  // the presence.
+  ipcMain.on("presence-update", (event, data) => {
+    if (!siteView || event.sender !== siteView.webContents) return;
+    if (!data || typeof data !== "object") return;
+    // Keep the last known username: the game reliably reports the room on every
+    // join, but the username only where the client knows it, so an empty
+    // username field must never wipe a previously reported one.
+    const reportedUsername = typeof data.username === "string" ? data.username.slice(0, 64) : "";
+    if (reportedUsername) presenceUsername = reportedUsername;
+    presenceRoom = typeof data.room === "string" ? data.room.slice(0, 100) : "";
+    overlayLogger.info(
+      "presence",
+      `game reported username=${presenceUsername ? "<set>" : "<empty>"} room=${presenceRoom || "<empty>"}`
+    );
+    updatePresenceActivity();
+  });
+
+  ipcMain.on("presence-clear", (event) => {
+    if (!siteView || event.sender !== siteView.webContents) return;
+    presenceUsername = "";
+    presenceRoom = "";
+    updatePresenceActivity();
+  });
+
+  // Privacy switch from the control bar.
+  ipcMain.on("presence-details-toggle", (_event, show) => {
+    presenceShowDetails = show === true;
+    saveSetting("presenceShowDetails", presenceShowDetails);
+    overlayLogger.info("presence", `details switch -> ${presenceShowDetails ? "show name+room" : "anonymous"}`);
+    updatePresenceActivity();
   });
 
   ipcMain.on("clear-cache", async () => {
@@ -892,4 +1135,5 @@ app.on("window-all-closed", function () {
 
 app.on("will-quit", () => {
   appVolume.dispose();
+  discordPresence.dispose();
 });

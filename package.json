@@ -10,8 +10,9 @@
     "url": "https://github.com/ekolokonet/ekoloko-desktop-app.git"
   },
   "scripts": {
-    "dev": "set NODE_OPTIONS=--openssl-legacy-provider && electron-webpack dev",
-    "compile": "set NODE_OPTIONS=--openssl-legacy-provider && electron-webpack",
+    "postinstall": "node scripts/setupDevFlashMac.js",
+    "dev": "electron-webpack dev",
+    "compile": "electron-webpack",
     "build": "npm run compile && electron-builder",
     "dist": "npm run compile && electron-builder",
     "dist:dir": "npm run dist -- --dir -c.compression=store -c.mac.identity=null",
@@ -21,6 +22,14 @@
     "dist:mac:dmg": "npm run dist:mac && node scripts/createMacDmg.js",
     "dist:mac:dir": "npm run compile && electron-builder --mac --x64 --dir -c.compression=store -c.mac.identity=null",
     "dist:mac:universal": "npm run compile && electron-builder --mac --universal"
+  },
+  "electronWebpack": {
+    "main": {
+      "webpackConfig": "webpack.additions.js"
+    },
+    "renderer": {
+      "webpackConfig": "webpack.additions.js"
+    }
   },
   "dependencies": {
     "electron-updater": "4.3.9",
