@@ -18,6 +18,13 @@ const DISCORD_URL = "https://discord.gg/5uBSQx4yWa";
 // "Application ID"). Empty string keeps the whole presence feature disabled.
 // See docs/DISCORD_PRESENCE.md for setup + the art asset keys.
 const DISCORD_CLIENT_ID = "1529879266370523206";
+// Rich-presence button shown to OTHER Discord users viewing the profile (you
+// can never click your own presence buttons — test with a second account).
+// Max 2 buttons, label <= 32 chars. When the privacy switch allows details,
+// the player's username is appended as ?ref=<username> for referral credit.
+const PRESENCE_BUTTON_LABEL = "להורדת המשחק";
+const PRESENCE_BUTTON_DISCORD_LABEL = "הצטרפו לקהילה"
+const PRESENCE_BUTTON_URL = "https://ekoloko.org/";
 const CONTROL_BAR_HEIGHT = 100;
 
 // Must match the bundled plugins/ DLLs. We ship CleanFlash 34.0.0.301
@@ -228,6 +235,22 @@ function buildPresenceActivity() {
     }
   } else {
     activity.details = "משחק באקולוקו";
+  }
+  if (PRESENCE_BUTTON_URL) {
+    // Referral only when the privacy switch permits showing the username.
+    const url =
+      presenceShowDetails && presenceUsername
+        ? `${PRESENCE_BUTTON_URL}?ref=${encodeURIComponent(presenceUsername)}`
+        : PRESENCE_BUTTON_URL;
+    activity.buttons = [
+      { label: PRESENCE_BUTTON_LABEL, url },
+      // Discord silently hides the ENTIRE activity from other viewers (no RPC
+      // error) when a presence button mentions their brand name — including the
+      // Hebrew "דיסקורד" — or, reportedly, links straight to discord.gg. So:
+      // neutral label + same-domain redirect page (ekoloko-client serves
+      // /ekoloko/discord.html which forwards to the invite).
+      { label: PRESENCE_BUTTON_DISCORD_LABEL, url: DISCORD_URL },
+    ];
   }
   return activity;
 }

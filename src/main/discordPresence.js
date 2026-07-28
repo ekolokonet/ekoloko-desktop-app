@@ -105,13 +105,23 @@ function onData(chunk) {
       scheduleReconnect();
       return;
     }
-    if (op === OP_FRAME && payload && payload.evt === "READY") {
-      ready = true;
-      reconnectAttempt = 0;
-      log.info("discord", "connected to Discord, rich presence ready");
-      // Push whatever the app wants shown as soon as we're ready.
-      dirty = true;
-      flush();
+    if (op === OP_FRAME && payload) {
+      if (payload.evt === "ERROR") {
+        // Discord rejected a command (e.g. invalid SET_ACTIVITY payload). When
+        // that happens the presence silently stops broadcasting to others, so
+        // surface the reason loudly.
+        const detail = (payload.data && (payload.data.message || payload.data.code)) || JSON.stringify(payload.data);
+        log.error("discord", `RPC ERROR (cmd=${payload.cmd || "?"}): ${detail}`);
+      } else if (payload.evt === "READY") {
+        ready = true;
+        reconnectAttempt = 0;
+        log.info("discord", "connected to Discord, rich presence ready");
+        // Push whatever the app wants shown as soon as we're ready.
+        dirty = true;
+        flush();
+      } else if (payload.cmd === "SET_ACTIVITY") {
+        log.info("discord", "SET_ACTIVITY acknowledged by Discord");
+      }
     }
   }
 }
