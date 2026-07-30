@@ -9,6 +9,23 @@ const path = require("path");
 
 const KEEP = new Set(["en-US.pak", "he.pak"]);
 
+function removeFinderMetadata(directory) {
+  if (!fs.existsSync(directory)) return 0;
+  let removed = 0;
+  for (const entry of fs.readdirSync(directory, { withFileTypes: true })) {
+    const entryPath = path.join(directory, entry.name);
+    if (entry.name === ".DS_Store" || entry.name.startsWith("._")) {
+      fs.unlinkSync(entryPath);
+      removed++;
+      continue;
+    }
+    if (entry.isDirectory() && !entry.isSymbolicLink()) {
+      removed += removeFinderMetadata(entryPath);
+    }
+  }
+  return removed;
+}
+
 exports.default = async function afterPack(context) {
   // Windows/Linux: <appOutDir>/locales ; macOS: inside the .app bundle Resources.
   const candidates = [
@@ -36,7 +53,10 @@ exports.default = async function afterPack(context) {
       removed++;
     }
   }
+  const finderMetadataRemoved = removeFinderMetadata(context.appOutDir);
   console.log(
-    `  • afterPack: pruned ${removed} locale .pak files (he.pak ${keptHe ? "kept" : "not found"})`
+    `  • afterPack: pruned ${removed} locale .pak files (he.pak ${
+      keptHe ? "kept" : "not found"
+    }); removed ${finderMetadataRemoved} Finder metadata files`
   );
 };

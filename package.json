@@ -1,6 +1,6 @@
 {
   "name": "ekoloko-rewritten",
-  "version": "1.0.20",
+  "version": "1.0.27",
   "author": "Arnon001 <support@arnon.games>",
   "description": "Application for ekoloko",
   "private": true,
@@ -46,15 +46,42 @@
       }
     ],
     "extraResources": [
-      "./assets/**"
+      {
+        "from": "assets",
+        "to": "assets",
+        "filter": [
+          "**/*",
+          "!._*",
+          "!**/._*",
+          "!**/.DS_Store"
+        ]
+      }
     ],
     "win": {
       "target": [
         "nsis"
       ],
       "extraResources": [
-        "./plugins/x64/**",
-        "./plugins/x64-debug/**"
+        {
+          "from": "plugins/x64",
+          "to": "plugins/x64",
+          "filter": [
+            "**/*",
+            "!._*",
+            "!**/._*",
+            "!**/.DS_Store"
+          ]
+        },
+        {
+          "from": "plugins/x64-debug",
+          "to": "plugins/x64-debug",
+          "filter": [
+            "**/*",
+            "!._*",
+            "!**/._*",
+            "!**/.DS_Store"
+          ]
+        }
       ],
       "certificateFile": "${env.WIN_CSC_LINK}",
       "certificatePassword": "${env.WIN_CSC_KEY_PASSWORD}",
@@ -70,8 +97,16 @@
       "category": "Game",
       "icon": "build/icon.png",
       "extraResources": [
-        "./assets/**",
-        "./plugins/linux/**"
+        {
+          "from": "plugins/linux",
+          "to": "plugins/linux",
+          "filter": [
+            "**/*",
+            "!._*",
+            "!**/._*",
+            "!**/.DS_Store"
+          ]
+        }
       ]
     },
     "mac": {
@@ -79,7 +114,16 @@
         "zip"
       ],
       "extraResources": [
-        "./plugins/mac/**"
+        {
+          "from": "plugins/mac",
+          "to": "plugins/mac",
+          "filter": [
+            "**/*",
+            "!._*",
+            "!**/._*",
+            "!**/.DS_Store"
+          ]
+        }
       ],
       "icon": "build/icon.icns",
       "identity": "${env.APPLE_IDENTITY}",

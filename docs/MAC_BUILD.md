@@ -9,9 +9,7 @@ This repository keeps the macOS work isolated from the Windows build path.
   - Windows loads `plugins/x64/pepflashplayer.dll` or `plugins/x32/pepflashplayer32.dll`.
   - macOS loads `plugins/mac/PepperFlashPlayer.plugin`.
   - Linux loads `plugins/linux/libpepflashplayer.so`.
-- The login URL is platform-aware:
-  - macOS uses `https://play.ekoloko.org/ekoloko/login.html`.
-  - Windows and Linux keep the default `https://prod.ekoloko.org/ekoloko/login.html`.
+- All platforms use `https://play.ekoloko.org/ekoloko/login.html`.
 
 ## macOS-only files
 
@@ -74,3 +72,10 @@ Do not commit generated release output:
 
 Upload the generated `.dmg` and `.zip` as GitHub Release assets instead of
 committing them to the repository.
+
+## Support and uninstall cleanup
+
+Dragging a `.app` to the Trash does not run an uninstall hook on macOS. Before
+removing the app, use `ekoloko > איפוס מלא לפני הסרה…` to remove its local
+Chromium/Flash data. See [`SUPPORT_AND_RECOVERY.md`](SUPPORT_AND_RECOVERY.md)
+for the support checklist and the exact residual paths.
