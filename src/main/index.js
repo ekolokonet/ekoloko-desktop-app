@@ -27,6 +27,23 @@ const PRESENCE_BUTTON_DISCORD_LABEL = "הצטרפו לקהילה"
 const PRESENCE_BUTTON_URL = "https://ekoloko.org/";
 const CONTROL_BAR_HEIGHT = 100;
 
+// Game sizing. login.html embeds the SWF at 100%x100% of a box it sizes itself
+// and exposes window.ekolokoGameZoom; the page auto-fits the game to the window
+// by default and takes a fixed scale factor when the slider is used. Driving
+// that bridge (rather than Chromium's page zoom) means Flash renders at the
+// final resolution instead of Chromium magnifying a 960x600 texture.
+//
+// The old page-zoom path is kept as a fallback for any page without the bridge
+// (error page, mid-navigation), where the embed is measured and these
+// dimensions are the last resort.
+const GAME_DEFAULT_WIDTH = 960;
+const GAME_DEFAULT_HEIGHT = 600;
+const ZOOM_MIN = 0.5;
+// Above the old slider's 2x ceiling: fitting a 600px-tall movie to a 1440p
+// screen needs ~2.1x, and the fit factor has to stay inside the slider range so
+// the thumb can always represent it.
+const ZOOM_MAX = 3;
+
 // Must match the bundled plugins/ DLLs. We ship CleanFlash 34.0.0.301
 // (kill-switch-free) PPAPI players: the plain release build in plugins/x64
 // (used by normal launches) and the content-debugger build in plugins/x64-debug
@@ -58,6 +75,14 @@ let pluginName;
 let osName;
 let isDarkMode = false;
 let darkModeCSSKey = null;
+
+// Zoom state: fit mode recomputes on every load/resize, manual mode keeps the
+// slider's factor. Both are persisted so the game comes back the way it was
+// left. Defaults are overwritten from settings.json before the window opens.
+let zoomFitEnabled = true;
+let manualZoom = 1;
+let zoomResizeTimer = null;
+let zoomSaveTimer = null;
 
 // Discord Rich Presence state. The privacy switch defaults to OFF so a fresh
 // install never broadcasts a kid's username/in-game location — with it off the
@@ -326,6 +351,36 @@ function getControlPageHtml() {
             color: #b8cdff;
             letter-spacing: 0.08em;
             text-transform: uppercase;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 8px;
+          }
+
+          /* Small toggle that lives inside a panel label (fit-to-screen). */
+          .chip {
+            flex-shrink: 0;
+            border: none;
+            border-radius: 8px;
+            padding: 1px 8px;
+            background: rgba(255, 255, 255, 0.18);
+            color: #dbe6ff;
+            font-family: inherit;
+            font-size: 12px;
+            line-height: 18px;
+            letter-spacing: 0;
+            cursor: pointer;
+            white-space: nowrap;
+            transition: background 0.1s, color 0.1s;
+          }
+
+          .chip:hover { background: rgba(255, 255, 255, 0.32); }
+
+          /* Lit while the game auto-fits the window; dragging the zoom slider
+             drops out of fit mode and unlights it. */
+          .chip.active {
+            background: linear-gradient(180deg, #ff9a2a 0%, #fb7d07 100%);
+            color: #fff;
           }
 
           .slider-row {
@@ -428,6 +483,12 @@ function getControlPageHtml() {
             border-color: #071228;
           }
           body.dark .panel-label { color: #5a80c0; }
+          body.dark .chip { background: rgba(255, 255, 255, 0.1); color: #8fb0e8; }
+          body.dark .chip:hover { background: rgba(255, 255, 255, 0.2); }
+          body.dark .chip.active {
+            background: linear-gradient(180deg, #2a3d6a 0%, #1a2848 100%);
+            color: #fff;
+          }
           body.dark .btn {
             background: linear-gradient(180deg, #1e2d50 0%, #131d38 100%);
             border-bottom-color: #060e1c;
@@ -441,6 +502,19 @@ function getControlPageHtml() {
       <body>
         <div class="bar">
           ${logoSrc ? `<img class="logo-img" src="${logoSrc}" alt="ekoloko" />` : ""}
+
+          <div class="panel">
+            <div class="panel-label">
+              <span>זום</span>
+              <button class="chip" id="zoomFitBtn" type="button" title="התאמת המשחק לגודל החלון">⤢ התאם</button>
+            </div>
+            <div class="slider-row">
+              <input id="zoom" type="range" min="${ZOOM_MIN}" max="${ZOOM_MAX}" step="0.05" value="1" />
+              <div class="val" id="zoomValue">100%</div>
+            </div>
+          </div>
+
+          <div class="spacer"></div>
 
           <div class="panel">
             <div class="panel-label" id="volumeLabel">🔊 עוצמת קול</div>
@@ -483,6 +557,9 @@ function getControlPageHtml() {
           const { ipcRenderer } = require("electron");
 
           const fullscreenBtn = document.getElementById("fullscreenBtn");
+          const zoom = document.getElementById("zoom");
+          const zoomValue = document.getElementById("zoomValue");
+          const zoomFitBtn = document.getElementById("zoomFitBtn");
           const volume = document.getElementById("volume");
           const volumeValue = document.getElementById("volumeValue");
           const volumeLabel = document.getElementById("volumeLabel");
@@ -506,6 +583,30 @@ function getControlPageHtml() {
 
           fullscreenBtn.addEventListener("click", () => {
             ipcRenderer.send("toggle-fullscreen");
+          });
+
+          function updateZoomUI(value, fit) {
+            zoom.value = value;
+            zoomValue.textContent = formatPercent(value);
+            setSliderFill(zoom);
+            zoomFitBtn.classList.toggle("active", fit);
+          }
+
+          // Dragging the slider is an explicit manual zoom, so it leaves fit mode.
+          zoom.addEventListener("input", () => {
+            updateZoomUI(zoom.value, false);
+            ipcRenderer.send("zoom-change", Number(zoom.value));
+          });
+
+          zoomFitBtn.addEventListener("click", () => {
+            ipcRenderer.send("zoom-fit");
+          });
+
+          // The main process owns the zoom: it answers the initial request and
+          // pushes a new factor whenever fit mode recomputes (load, resize,
+          // fullscreen).
+          ipcRenderer.on("zoom-changed", (_event, state) => {
+            updateZoomUI(state.zoom, state.fit);
           });
 
           ipcRenderer.on("fullscreen-changed", (_event, isFull) => {
@@ -570,6 +671,8 @@ function getControlPageHtml() {
           }
 
           updateVolumeUI();
+          updateZoomUI(${manualZoom}, ${zoomFitEnabled ? "true" : "false"});
+          ipcRenderer.send("zoom-request");
         </script>
       </body>
     </html>
@@ -590,6 +693,127 @@ function setViewBounds() {
   });
 
   siteView.setAutoResize({ width: true, height: true });
+}
+
+// Snap to the slider's 0.05 step so the thumb never lands between notches.
+function roundZoom(zoomFactor) {
+  const value = Number(zoomFactor);
+  if (!isFinite(value) || value <= 0) return 1;
+  return Math.round(value * 20) / 20;
+}
+
+function clampZoom(zoomFactor) {
+  return Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, roundZoom(zoomFactor)));
+}
+
+// Measures the Flash embed in CSS pixels. CSS pixels are zoom-independent, so
+// the result is stable no matter what the current zoom factor is. `top` is how
+// far down the page the embed starts (the page centres it in a table), which
+// has to be scaled along with the movie or fitting pushes it out of view.
+async function measureGameSize() {
+  const fallback = { width: GAME_DEFAULT_WIDTH, height: GAME_DEFAULT_HEIGHT, top: 0 };
+  if (!siteView) return fallback;
+  try {
+    const size = await siteView.webContents.executeJavaScript(`(function () {
+      var el = document.getElementById("shell") || document.querySelector("object, embed");
+      if (!el) return null;
+      var width = el.offsetWidth || parseInt(el.getAttribute("width"), 10) || 0;
+      var height = el.offsetHeight || parseInt(el.getAttribute("height"), 10) || 0;
+      if (!(width > 0 && height > 0)) return null;
+      var rect = el.getBoundingClientRect();
+      return { width: width, height: height, top: Math.max(0, rect.top + window.pageYOffset) };
+    })();`);
+    if (size && size.width > 0 && size.height > 0) return size;
+  } catch (e) {
+    // navigating / no page yet — fall back to the known embed size
+  }
+  return fallback;
+}
+
+async function computeFitZoom() {
+  if (!win || win.isDestroyed() || !siteView) return clampZoom(manualZoom);
+  const size = await measureGameSize();
+  const bounds = win.getContentBounds();
+  // Reserve the page's 20px side padding plus room for a scrollbar, and a few
+  // pixels vertically, so fitting never creates the scrollbar that would then
+  // steal the width the fit was calculated against.
+  const availableWidth = Math.max(1, bounds.width - 56);
+  const availableHeight = Math.max(1, bounds.height - CONTROL_BAR_HEIGHT - 12);
+  return clampZoom(
+    Math.min(availableWidth / size.width, availableHeight / (size.height + size.top))
+  );
+}
+
+function sendZoomState(zoomFactor) {
+  if (!win || win.isDestroyed()) return;
+  win.webContents.send("zoom-changed", { zoom: zoomFactor, fit: zoomFitEnabled });
+}
+
+// Hand the requested sizing to the game page's own layout (window.ekolokoGameZoom
+// from login.html) and read back the scale it settled on — in fit mode the page
+// is the one that knows how much room is left once its footer strip is measured.
+// Returns null when the page has no bridge, which is the caller's cue to fall
+// back to Chromium page zoom.
+async function applyPageScale(fit, scale) {
+  if (!siteView || siteView.webContents.isDestroyed()) return null;
+  const js = `(function () {
+    if (!window.ekolokoGameZoom) return null;
+    return window.ekolokoGameZoom.apply(${fit ? "true" : "false"}, ${Number(scale) || 0});
+  })();`;
+  try {
+    const state = await siteView.webContents.executeJavaScript(js);
+    if (state && Number(state.scale) > 0) return Number(state.scale);
+  } catch (e) {
+    // navigating / no page yet
+  }
+  return null;
+}
+
+// Single entry point for every zoom change: tells the page what to do, then
+// syncs the control bar with the scale that actually took effect.
+async function refreshZoom() {
+  if (!siteView) return;
+
+  const applied = await applyPageScale(zoomFitEnabled, manualZoom);
+  if (applied !== null) {
+    // The page sizes the movie itself, so Chromium zoom must stay neutral —
+    // otherwise the two multiply and the fit overshoots the window.
+    if (siteView && !siteView.webContents.isDestroyed()) {
+      siteView.webContents.setZoomFactor(1);
+    }
+    // Not clamped: a fit on a very large screen may legitimately exceed the
+    // slider's ceiling, and the readout should say what the game is really at.
+    sendZoomState(roundZoom(applied));
+    return;
+  }
+
+  // Fallback for a page without the bridge: scale it with Chromium page zoom.
+  const zoomFactor = zoomFitEnabled ? await computeFitZoom() : clampZoom(manualZoom);
+  if (siteView && !siteView.webContents.isDestroyed()) {
+    siteView.webContents.setZoomFactor(zoomFactor);
+  }
+  sendZoomState(zoomFactor);
+}
+
+// Dragging the slider fires an event per 0.05 step, so the preference is
+// written once the drag settles rather than on every notch.
+function saveZoomPreference() {
+  if (zoomSaveTimer) clearTimeout(zoomSaveTimer);
+  zoomSaveTimer = setTimeout(() => {
+    zoomSaveTimer = null;
+    saveSetting("zoomFit", zoomFitEnabled);
+    saveSetting("zoomLevel", manualZoom);
+  }, 400);
+}
+
+// Window resizes arrive in a burst while dragging; recompute once it settles.
+function scheduleZoomRefresh() {
+  if (!zoomFitEnabled) return;
+  if (zoomResizeTimer) clearTimeout(zoomResizeTimer);
+  zoomResizeTimer = setTimeout(() => {
+    zoomResizeTimer = null;
+    refreshZoom();
+  }, 150);
 }
 
 async function applyDarkModeCSS(isDark) {
@@ -892,9 +1116,10 @@ function createWindow() {
   });
 
   siteView.webContents.on("did-finish-load", () => {
-    // Keep the game at a fixed 100% zoom; Chromium otherwise persists the
-    // per-origin zoom factor across loads.
-    siteView.webContents.setZoomFactor(1);
+    // Always set the zoom explicitly after a load: Chromium otherwise persists
+    // the per-origin zoom factor, and in fit mode the new page's embed has to be
+    // measured again anyway.
+    refreshZoom();
     if (isDarkMode) applyDarkModeCSS(true);
     // TEMP debug overlay (dev only) — re-inject after every navigation.
     if (DEVTOOLS_ENABLED) {
@@ -902,16 +1127,31 @@ function createWindow() {
     }
   });
 
-  win.on("resize", setViewBounds);
+  win.on("resize", () => {
+    setViewBounds();
+    scheduleZoomRefresh();
+  });
   win.on("enter-full-screen", () => {
     if (win) win.webContents.send("fullscreen-changed", true);
+    scheduleZoomRefresh();
   });
   win.on("leave-full-screen", () => {
     if (win) win.webContents.send("fullscreen-changed", false);
+    scheduleZoomRefresh();
   });
   win.on("closed", () => {
     win = null;
     siteView = null;
+    if (zoomResizeTimer) {
+      clearTimeout(zoomResizeTimer);
+      zoomResizeTimer = null;
+    }
+    if (zoomSaveTimer) {
+      clearTimeout(zoomSaveTimer);
+      zoomSaveTimer = null;
+      saveSetting("zoomFit", zoomFitEnabled);
+      saveSetting("zoomLevel", manualZoom);
+    }
   });
 }
 
@@ -1042,9 +1282,12 @@ app.whenReady().then(() => {
   // users run the plain release player with no mm.cfg / flashlog side effects.
   if (DEBUG_MODE) ensureFlashDebugConfig();
 
-  // Load the persisted privacy switch before the control bar HTML is generated
-  // so the button renders in the right state.
-  presenceShowDetails = readSettings().presenceShowDetails === true;
+  // Load the persisted privacy switch and zoom preference before the control bar
+  // HTML is generated so the button and slider render in the right state.
+  const settings = readSettings();
+  presenceShowDetails = settings.presenceShowDetails === true;
+  zoomFitEnabled = settings.zoomFit !== false;
+  manualZoom = clampZoom(settings.zoomLevel !== undefined ? settings.zoomLevel : 1);
 
   createAppMenu();
   createWindow();
@@ -1061,6 +1304,25 @@ app.whenReady().then(() => {
   ipcMain.on("toggle-fullscreen", () => {
     if (!win) return;
     win.setFullScreen(!win.isFullScreen());
+  });
+
+  ipcMain.on("zoom-change", (_event, zoomFactor) => {
+    zoomFitEnabled = false;
+    manualZoom = clampZoom(zoomFactor);
+    saveZoomPreference();
+    refreshZoom();
+  });
+
+  ipcMain.on("zoom-fit", () => {
+    zoomFitEnabled = true;
+    saveZoomPreference();
+    refreshZoom();
+  });
+
+  // The control bar asks for the current factor once its page is up, since fit
+  // mode only knows the number after the game view has been measured.
+  ipcMain.on("zoom-request", () => {
+    refreshZoom();
   });
 
   ipcMain.on("volume-change", (_event, volume) => {
