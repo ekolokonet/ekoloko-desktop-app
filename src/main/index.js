@@ -1232,10 +1232,16 @@ function createWindow() {
   });
   win.on("enter-full-screen", () => {
     if (win) win.webContents.send("fullscreen-changed", true);
+    // The window jumps straight to the screen's full size with no decorations,
+    // which doesn't reliably fire 'resize' on its own (same class of issue as
+    // the maximize() timing above) — the BrowserView is left sized for the
+    // pre-fullscreen window, showing as a gap/line along the edge it fell short.
+    setViewBounds();
     scheduleZoomRefresh();
   });
   win.on("leave-full-screen", () => {
     if (win) win.webContents.send("fullscreen-changed", false);
+    setViewBounds();
     scheduleZoomRefresh();
   });
   win.on("closed", () => {
