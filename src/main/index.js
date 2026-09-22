@@ -9,7 +9,6 @@ const appVolume = require("./appVolume");
 const discordPresence = require("./discordPresence");
 const roomNames = require("./roomNames");
 
-// const LOGIN_URL = "https://ekobeta.arnon001.com/ekoloko/login.html";
 const LOGIN_URL = "https://play.ekoloko.org/ekoloko/login.html";
 const DISCORD_URL = "https://discord.gg/5uBSQx4yWa";
 
@@ -1051,6 +1050,7 @@ function createWindow() {
   win = new BrowserWindow({
     autoHideMenuBar: true,
     backgroundColor: "#6aaa1e",
+    show: false,
     webPreferences: {
       nodeIntegration: true,
       contextIsolation: false,
@@ -1059,7 +1059,39 @@ function createWindow() {
     },
   });
 
-  win.maximize();
+  // maximize() right after creation is unreliable on Linux window managers:
+  // the request can arrive before the WM has mapped the window and gets
+  // silently dropped, leaving the window at Electron's 800x600 default.
+  // Waiting for ready-to-show (and showing the window maximized) makes it
+  // stick everywhere.
+  win.once("ready-to-show", () => {
+    win.maximize();
+    win.show();
+  });
+
+  // maximize() is a request to the window manager, not an immediate resize —
+  // on Linux/X11 it's handled asynchronously, so getContentBounds() read right
+  // after calling it can still report the pre-maximize size. The BrowserView
+  // bounds computed at creation time are wrong until something re-measures
+  // after the real resize lands. 'maximize' fires once that's actually
+  // happened; the timers are a belt-and-suspenders fallback for window
+  // managers where a window shown already-maximized doesn't fire either event.
+  win.on("maximize", () => {
+    setViewBounds();
+    refreshZoom();
+  });
+  setTimeout(() => {
+    if (win && !win.isDestroyed()) {
+      setViewBounds();
+      refreshZoom();
+    }
+  }, 500);
+  setTimeout(() => {
+    if (win && !win.isDestroyed()) {
+      setViewBounds();
+      refreshZoom();
+    }
+  }, 1500);
 
   const controlHtmlPath = path.join(app.getPath("temp"), `ekoloko-control-${Date.now()}.html`);
   fs.writeFileSync(controlHtmlPath, getControlPageHtml(), "utf8");
