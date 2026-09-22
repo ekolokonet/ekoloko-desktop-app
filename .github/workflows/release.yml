@@ -48,8 +48,8 @@ jobs:
       - name: Install dependencies
         run: npm install
 
-      - name: Set release version (1.1.<run number>)
-        run: npm version "1.1.${{ github.run_number - 27 }}" --no-git-tag-version --allow-same-version
+      - name: Set release version (1.1.<run number - 28>)
+        run: npm version "1.1.$(( ${{ github.run_number }} - 28 ))" --no-git-tag-version --allow-same-version
 
       - name: Compile
         run: npm run compile
@@ -88,9 +88,10 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh release create "v1.1.${{ github.run_number - 27 }}" artifacts/* \
+          VERSION=$(( ${{ github.run_number }} - 28 ))
+          gh release create "v1.1.${VERSION}" artifacts/* \
             --repo "${{ github.repository }}" \
             --target "${{ github.sha }}" \
-            --title "ekoloko v1.1.${{ github.run_number - 27 }}" \
+            --title "ekoloko v1.1.${VERSION}" \
             --notes "Automated release from commit ${{ github.sha }}." \
             --latest
