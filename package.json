@@ -67,6 +67,7 @@
       ]
     },
     "linux": {
+      "executableName": "ekoloko",
       "target": [
         "AppImage"
       ],
