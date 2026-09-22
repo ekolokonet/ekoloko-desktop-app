@@ -75,6 +75,13 @@ let osName;
 let isDarkMode = false;
 let darkModeCSSKey = null;
 
+// The control bar's CSS now sizes itself responsively (clamp()s keyed off
+// window width) so its buttons don't dwarf the game on smaller screens. The
+// renderer reports its real, laid-out height back over IPC (see the
+// "control-bar-height" handler below) and this tracks it; CONTROL_BAR_HEIGHT
+// stays as the initial/fallback value used before that first report arrives.
+let controlBarHeight = CONTROL_BAR_HEIGHT;
+
 // Zoom state: fit mode recomputes on every load/resize, manual mode keeps the
 // slider's factor. Both are persisted so the game comes back the way it was
 // left. Defaults are overwritten from settings.json before the window opens.
@@ -316,32 +323,45 @@ function getControlPageHtml() {
 
           * { box-sizing: border-box; margin: 0; padding: 0; }
 
+          /* The bar sizes itself off window width (clamp(min, vw-based, max))
+             so it shrinks to fit smaller monitors/windows instead of always
+             claiming its full design-size footprint. The max in each clamp()
+             matches the original fixed sizes; JS reads back the real laid-out
+             height (see the "control-bar-height" IPC message) since it no
+             longer equals the CONTROL_BAR_HEIGHT constant on smaller windows. */
           body {
             font-family: 'GanCLM', 'Arial Rounded MT Bold', Arial, sans-serif;
             overflow: hidden;
-            height: ${CONTROL_BAR_HEIGHT}px;
+            height: clamp(64px, 5.2vw, ${CONTROL_BAR_HEIGHT}px);
             background: linear-gradient(180deg, #8fd42e 0%, #6aaa1e 100%);
             border-bottom: 4px solid #4e8810;
+            /* The round Discord icon's size/offset drive the fullscreen
+               button's reserved margin directly (see .btn-fullscreen), so the
+               gap between them stays constant instead of drifting at
+               in-between window widths where two independently clamp()'d
+               values wouldn't shrink in lockstep. */
+            --icon-size: clamp(48px, 3.75vw, 72px);
+            --icon-right: clamp(6px, 0.52vw, 10px);
           }
 
           .bar {
-            height: ${CONTROL_BAR_HEIGHT}px;
+            height: clamp(64px, 5.2vw, ${CONTROL_BAR_HEIGHT}px);
             position: relative;
             display: flex;
             align-items: center;
-            padding: 0 28px;
-            gap: 20px;
+            padding: 0 clamp(14px, 1.46vw, 28px);
+            gap: clamp(10px, 1.04vw, 20px);
           }
 
           .logo-img {
             flex-shrink: 0;
-            height: 96px;
+            height: clamp(56px, 5vw, 96px);
           }
 
           .sep {
             flex-shrink: 0;
             width: 2px;
-            height: 68px;
+            height: clamp(40px, 3.54vw, 68px);
             background: rgba(255, 255, 255, 0.3);
             border-radius: 2px;
           }
@@ -353,15 +373,15 @@ function getControlPageHtml() {
             background: #3a6fd8;
             border-radius: 14px;
             border: 3px solid #2a55c0;
-            padding: 10px 16px 12px;
+            padding: clamp(6px, 0.52vw, 10px) clamp(10px, 0.83vw, 16px) clamp(8px, 0.62vw, 12px);
             display: flex;
             flex-direction: column;
-            gap: 6px;
-            min-width: 140px;
+            gap: clamp(4px, 0.31vw, 6px);
+            min-width: clamp(100px, 7.3vw, 140px);
           }
 
           .panel-label {
-            font-size: 12px;
+            font-size: clamp(10px, 0.62vw, 12px);
             color: #b8cdff;
             letter-spacing: 0.08em;
             text-transform: uppercase;
@@ -376,12 +396,12 @@ function getControlPageHtml() {
             flex-shrink: 0;
             border: none;
             border-radius: 8px;
-            padding: 1px 8px;
+            padding: 1px clamp(6px, 0.42vw, 8px);
             background: rgba(255, 255, 255, 0.18);
             color: #dbe6ff;
             font-family: inherit;
-            font-size: 12px;
-            line-height: 18px;
+            font-size: clamp(10px, 0.62vw, 12px);
+            line-height: clamp(15px, 0.94vw, 18px);
             letter-spacing: 0;
             cursor: pointer;
             white-space: nowrap;
@@ -400,7 +420,7 @@ function getControlPageHtml() {
           .slider-row {
             display: flex;
             align-items: center;
-            gap: 10px;
+            gap: clamp(6px, 0.52vw, 10px);
           }
 
           input[type="range"] {
@@ -420,8 +440,8 @@ function getControlPageHtml() {
           input[type="range"]::-webkit-slider-thumb {
             -webkit-appearance: none;
             appearance: none;
-            width: 18px;
-            height: 18px;
+            width: clamp(14px, 0.94vw, 18px);
+            height: clamp(14px, 0.94vw, 18px);
             border-radius: 50%;
             background: #fff;
             box-shadow: 0 1px 4px rgba(0,0,0,0.4);
@@ -433,7 +453,7 @@ function getControlPageHtml() {
           input[type="range"]:active::-webkit-slider-thumb { transform: scale(1.3); }
 
           .val {
-            font-size: 14px;
+            font-size: clamp(11px, 0.73vw, 14px);
             color: #fff;
             min-width: 42px;
             text-align: right;
@@ -444,13 +464,13 @@ function getControlPageHtml() {
             flex-shrink: 0;
             border: none;
             border-radius: 14px;
-            padding: 0 26px;
-            height: 52px;
+            padding: 0 clamp(14px, 1.35vw, 26px);
+            height: clamp(34px, 2.7vw, 52px);
             background: linear-gradient(180deg, #ff9a2a 0%, #fb7d07 100%);
             border-bottom: 4px solid #c05800;
             color: #fff;
             font-family: inherit;
-            font-size: 17px;
+            font-size: clamp(12px, 0.9vw, 17px);
             cursor: pointer;
             text-shadow: 1px 1px 2px rgba(0,0,0,0.3);
             transition: transform 0.1s, border-bottom-width 0.1s, filter 0.1s;
@@ -460,23 +480,24 @@ function getControlPageHtml() {
           .btn:hover { filter: brightness(1.08); }
           .btn:active { transform: translateY(3px); border-bottom-width: 1px; }
 
-          .spacer { width: 10px; flex-shrink: 0; }
+          .spacer { width: clamp(6px, 0.52vw, 10px); flex-shrink: 0; }
 
           /* Push the fullscreen button to the far right of the bar. The reserved
-             right margin clears the absolutely-positioned Discord icon. */
-          .btn-fullscreen { margin-left: auto; margin-right: ${discordSrc ? "84px" : "0"}; }
+             right margin clears the absolutely-positioned Discord icon, with a
+             fixed 14px gap between them at every window width. */
+          .btn-fullscreen { margin-left: auto; margin-right: ${discordSrc ? "calc(var(--icon-right) + var(--icon-size) + 14px)" : "0"}; }
 
           .btn-icon {
             position: absolute;
-            top: 6px;
-            right: 10px;
+            top: clamp(4px, 0.31vw, 6px);
+            right: var(--icon-right);
             background: none;
             border: none;
             padding: 0;
             cursor: pointer;
             border-radius: 50%;
-            width: 72px;
-            height: 72px;
+            width: var(--icon-size);
+            height: var(--icon-size);
             overflow: hidden;
             display: flex;
             align-items: center;
@@ -557,7 +578,9 @@ function getControlPageHtml() {
           ${DISCORD_CLIENT_ID
             ? `<div class="spacer"></div>
 
-          <button class="btn" id="presenceBtn" type="button" title="מה חברים רואים בדיסקורד: שם ומיקום במשחק, או אנונימי">${presenceShowDetails ? "🎮 דיסקורד: שם ומיקום" : "🔒 דיסקורד: אנונימי"}</button>`
+          <button class="btn" id="presenceBtn" type="button" title="מה חברים רואים בדיסקורד: שם ומיקום במשחק, או אנונימי">${presenceShowDetails ? "🎮 דיסקורד: שם ומיקום" : "🔒 דיסקורד: אנונימי"}</button>
+
+          <div class="spacer"></div>`
             : ""}
 
           <button class="btn btn-fullscreen" id="fullscreenBtn" type="button">⛶ מסך מלא</button>
@@ -569,6 +592,21 @@ function getControlPageHtml() {
         </div>
         <script>
           const { ipcRenderer } = require("electron");
+
+          // The bar's height now flexes with window width (CSS clamp()s), so
+          // the main process can no longer assume the CONTROL_BAR_HEIGHT
+          // constant when sizing the game view under it. Report the real,
+          // laid-out height whenever it changes.
+          const barEl = document.querySelector(".bar");
+          function reportBarHeight() {
+            ipcRenderer.send("control-bar-height", Math.ceil(barEl.getBoundingClientRect().height));
+          }
+          if (window.ResizeObserver) {
+            new ResizeObserver(reportBarHeight).observe(barEl);
+          } else {
+            window.addEventListener("resize", reportBarHeight);
+          }
+          reportBarHeight();
 
           const fullscreenBtn = document.getElementById("fullscreenBtn");
           const zoom = document.getElementById("zoom");
@@ -701,9 +739,9 @@ function setViewBounds() {
   const bounds = win.getContentBounds();
   siteView.setBounds({
     x: 0,
-    y: CONTROL_BAR_HEIGHT,
+    y: controlBarHeight,
     width: bounds.width,
-    height: Math.max(0, bounds.height - CONTROL_BAR_HEIGHT),
+    height: Math.max(0, bounds.height - controlBarHeight),
   });
 
   siteView.setAutoResize({ width: true, height: true });
@@ -752,7 +790,7 @@ async function computeFitZoom() {
   // pixels vertically, so fitting never creates the scrollbar that would then
   // steal the width the fit was calculated against.
   const availableWidth = Math.max(1, bounds.width - 56);
-  const availableHeight = Math.max(1, bounds.height - CONTROL_BAR_HEIGHT - 12);
+  const availableHeight = Math.max(1, bounds.height - controlBarHeight - 12);
   return clampZoom(
     Math.min(availableWidth / size.width, availableHeight / (size.height + size.top))
   );
@@ -830,6 +868,14 @@ function scheduleZoomRefresh() {
   }, 150);
 }
 
+// login.html's actual visuals (jungle scene, logo, nav bar, play/register
+// buttons) are pixels drawn by the Flash movie in #mainSWFDIV — compiled .swf
+// assets served by the game backend, entirely outside CSS's reach. What's
+// left in the DOM (and the only thing this can style) is the green
+// letterboxing chrome around the movie: html/body, .page-container,
+// .game-viewport, #mainSWFDIV's own backgrounds (visible whenever the movie
+// doesn't exactly fill the viewport, e.g. mid-resize or at some zoom levels)
+// plus the footer strip below it.
 async function applyDarkModeCSS(isDark) {
   if (!siteView) return;
   if (darkModeCSSKey) {
@@ -837,9 +883,15 @@ async function applyDarkModeCSS(isDark) {
     darkModeCSSKey = null;
   }
   if (isDark) {
-    darkModeCSSKey = await siteView.webContents.insertCSS(
-      "html, body { background-color: #1c2d4a !important; }"
-    );
+    darkModeCSSKey = await siteView.webContents.insertCSS(`
+      html, body {
+        background-color: #1c2d4a !important;
+        background-image: none !important;
+      }
+      .page-container, .game-viewport, #mainSWFDIV, .game-footer {
+        background-color: #1c2d4a !important;
+      }
+    `);
   }
 }
 
@@ -1351,6 +1403,17 @@ app.whenReady().then(() => {
   ipcMain.on("toggle-fullscreen", () => {
     if (!win) return;
     win.setFullScreen(!win.isFullScreen());
+  });
+
+  // The control bar's height now flexes with window width (see .bar's CSS
+  // clamp()s), so it reports its real laid-out height here instead of the
+  // game view assuming the fixed CONTROL_BAR_HEIGHT.
+  ipcMain.on("control-bar-height", (_event, height) => {
+    const h = Math.round(Number(height));
+    if (!isFinite(h) || h <= 0 || h === controlBarHeight) return;
+    controlBarHeight = h;
+    setViewBounds();
+    scheduleZoomRefresh();
   });
 
   ipcMain.on("zoom-change", (_event, zoomFactor) => {
