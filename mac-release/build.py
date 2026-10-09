@@ -47,7 +47,7 @@ fixture=resources/'candidate-fixture'
 shutil.rmtree(fixture)
 shutil.copytree(a.fixture,fixture,ignore=shutil.ignore_patterns('._*','.DS_Store'))
 info=plistlib.loads((app/'Contents/Info.plist').read_bytes())
-info.update(CFBundleIdentifier='org.ekoloko',CFBundleName='ekoloko',CFBundleDisplayName='ekoloko',CFBundleShortVersionString='1.1.1',CFBundleVersion='1112')
+info.update(CFBundleIdentifier='org.ekoloko.flash34',CFBundleName='Ekoloko Flash34',CFBundleDisplayName='ekoloko',CFBundleShortVersionString='1.1.1',CFBundleVersion='1112')
 (app/'Contents/Info.plist').write_bytes(plistlib.dumps(info))
 sha=lambda file:hashlib.sha256(file.read_bytes()).hexdigest()
 player=resources/'plugins/mac34/PepperFlashPlayer.plugin/Contents/MacOS/PepperFlashPlayer'

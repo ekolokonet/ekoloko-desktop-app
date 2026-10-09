@@ -10,7 +10,7 @@ const appVolume = HAS_APP_VOLUME_CONTROL ? require("./appVolume") : null;
 const discordPresence = require("./discordPresence");
 const roomNames = require("./roomNames");
 const createRecovery = require("./recovery");
-const CANDIDATE_NAME = "ekoloko";
+const CANDIDATE_NAME = "Ekoloko Flash34";
 const REVIEW_MODE = process.argv.includes("--candidate-review");
 const FIXTURE_MODE = process.argv.includes("--candidate-fixture");
 const SELF_TEST = FIXTURE_MODE && process.argv.includes("--candidate-self-test");
@@ -122,7 +122,6 @@ const DEVTOOLS_ENABLED = DEBUG_MODE;
 let win;
 let siteView;
 let quitting = false;
-let reviewPowerBlocker = null;
 const recovery = createRecovery({
   log: (message) => logger.error("recovery", message),
   ask: async () => {
@@ -1489,7 +1488,6 @@ function initAutoUpdater() {
 
 app.whenReady().then(async () => {
   if (!ownsInstanceLock) return;
-  if (REVIEW_MODE) reviewPowerBlocker = require("electron").powerSaveBlocker.start("prevent-app-suspension");
   await fixtureReady;
   if (FIXTURE_MODE) {
     require("electron").session.defaultSession.webRequest.onBeforeRequest((details, callback) => {
@@ -1650,7 +1648,6 @@ app.on("window-all-closed", function () {
 });
 
 app.on("will-quit", () => {
-  if (reviewPowerBlocker !== null) require("electron").powerSaveBlocker.stop(reviewPowerBlocker);
   if (fixtureServer) fixtureServer.close();
   if (appVolume) appVolume.dispose();
   discordPresence.dispose();
