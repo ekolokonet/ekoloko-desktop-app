@@ -37,7 +37,7 @@ def extract(files,dir):
       if e.get('executable'):dest.chmod(0o755)
 extract(h['files']['node_modules']['files'],stage/'node_modules')
 package=json.loads((repo/'package.json').read_text())
-package.update(name='ekoloko-rewritten',version='1.1.1',main='src/main/index.js')
+package.update(name='ekoloko-mac-flash34',version='1.1.1',main='src/main/index.js')
 (stage/'package.json').write_text(json.dumps(package,indent=2)+'\n')
 resources=app/'Contents/Resources'
 subprocess.run([a.node,'-e','require(process.argv[1]).createPackage(process.argv[2],process.argv[3]).catch(e=>{console.error(e);process.exitCode=1})',a.asar_module,str(stage),str(resources/'app.asar')],check=True)

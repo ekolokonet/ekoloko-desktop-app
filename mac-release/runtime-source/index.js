@@ -27,7 +27,7 @@ app.setName(CANDIDATE_NAME);
 // Deliberately separate cookies, cache, settings and identity from both live apps.
 app.setPath("userData", FIXTURE_MODE || REVIEW_MODE
   ? path.resolve(path.dirname(app.getPath("exe")), "../../../..", FIXTURE_MODE ? "profile-mac-release-fixture" : "profile-mac-release-review")
-  : path.join(app.getPath("appData"), "ekoloko-rewritten"));
+  : path.join(app.getPath("appData"), "ekoloko-mac-flash34"));
 const ownsInstanceLock = app.requestSingleInstanceLock();
 if (!ownsInstanceLock) app.quit();
 app.on("second-instance", () => {

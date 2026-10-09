@@ -11,8 +11,9 @@ updates remain disabled; `latest-mac.yml` is distribution metadata only.
 
 Runtime entry: `runtime-source/index.js`, copied to `src/main/index.js` in app.asar.
 The app ID is `org.ekoloko.flash34`, distinct from the legacy client's identity;
-normal userData is the historical
-`~/Library/Application Support/ekoloko-rewritten`. Review/fixture modes use separate
+normal userData is the separate
+`~/Library/Application Support/ekoloko-mac-flash34`. Legacy data is not imported
+or removed, and the first launch requires normal login. Review/fixture modes use separate
 directories outside the app bundle. The published packages contain no profiles,
 logs, credentials or user configuration.
 
