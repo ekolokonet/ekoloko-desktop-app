@@ -122,6 +122,7 @@ const DEVTOOLS_ENABLED = DEBUG_MODE;
 let win;
 let siteView;
 let quitting = false;
+let reviewPowerBlocker = null;
 const recovery = createRecovery({
   log: (message) => logger.error("recovery", message),
   ask: async () => {
@@ -1488,6 +1489,7 @@ function initAutoUpdater() {
 
 app.whenReady().then(async () => {
   if (!ownsInstanceLock) return;
+  if (REVIEW_MODE) reviewPowerBlocker = require("electron").powerSaveBlocker.start("prevent-app-suspension");
   await fixtureReady;
   if (FIXTURE_MODE) {
     require("electron").session.defaultSession.webRequest.onBeforeRequest((details, callback) => {
@@ -1648,6 +1650,7 @@ app.on("window-all-closed", function () {
 });
 
 app.on("will-quit", () => {
+  if (reviewPowerBlocker !== null) require("electron").powerSaveBlocker.stop(reviewPowerBlocker);
   if (fixtureServer) fixtureServer.close();
   if (appVolume) appVolume.dispose();
   discordPresence.dispose();

@@ -8,6 +8,10 @@ module.exports=({app,window,view,restart,logger,setViewBounds,refreshZoom})=>{
   record({event:'start',cycle,visible:window.isVisible(),profile:app.getPath('userData')});
   for(const [name,wc] of [['toolbar',window.webContents],['game',view.webContents]])wc.on('crashed',(_e,killed)=>record({event:'crash',name,killed}));
   app.on('gpu-process-crashed',(_e,killed)=>record({event:'gpu-crash',killed}));
+  // executeJavaScript may wait indefinitely for a pending navigation, so the
+  // whole hidden test has an independent deadline rather than a polling-only one.
+  const watchdog=setTimeout(()=>{record({event:'failure',error:'Hidden release review timed out after 45 seconds'});app.quit();},45000);
+  app.on('before-quit',()=>clearTimeout(watchdog));
   const delay=ms=>new Promise(r=>setTimeout(r,ms));
   (async()=>{
     const deadline=Date.now()+30000;
