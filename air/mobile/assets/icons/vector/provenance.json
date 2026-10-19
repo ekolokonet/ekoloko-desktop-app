@@ -1,0 +1,168 @@
+{
+  "tool": "vtracer 0.6.15",
+  "parameters": {
+    "colormode": "color",
+    "hierarchical": "stacked",
+    "mode": "spline",
+    "filter_speckle": 12,
+    "color_precision": 6,
+    "layer_difference": 12,
+    "corner_threshold": 60,
+    "length_threshold": 4,
+    "max_iterations": 10,
+    "splice_threshold": 45,
+    "path_precision": 2
+  },
+  "icons": {
+    "overview": {
+      "sourceSha256": "2410afaf2c14ef1eeaa0137e2949c05f33cf1507c19700757fcf9f8ed7f4160f",
+      "vectorSha256": "5df4076f5be8021702c02010c0e81554ff79e4a70357a1526392a2654e9e66f9",
+      "sourceBounds": [
+        114,
+        138,
+        1143,
+        1118
+      ],
+      "traceSize": [
+        512,
+        488
+      ],
+      "paths": 23
+    },
+    "follow": {
+      "sourceSha256": "341f6c022861afc6a50820ddd5d32688b12633760686397be8e7a866858d9731",
+      "vectorSha256": "c2f945166d7578453ed6c44ad66191382516706dd353edceab92503c8b14c7ae",
+      "sourceBounds": [
+        226,
+        250,
+        1038,
+        1032
+      ],
+      "traceSize": [
+        512,
+        493
+      ],
+      "paths": 26
+    },
+    "rotate": {
+      "sourceSha256": "7755ae50d8fed832911b9fe248eafc9e217ce37b3e3d4dab87c0690eee59a5e9",
+      "vectorSha256": "3b7771d4c9f7fab74182618c71440459173bd76bf2e4f83ca735429de17a7f40",
+      "sourceBounds": [
+        148,
+        156,
+        1109,
+        1100
+      ],
+      "traceSize": [
+        512,
+        503
+      ],
+      "paths": 15
+    },
+    "opacity": {
+      "sourceSha256": "d434eb4345f63774e4f2fa1ba0556440bbfa52295de3276e0334c547697056bb",
+      "vectorSha256": "99b3264f5ddc0c480d1f999a28608f41f23887e08ddf536fc0b212b1098236bc",
+      "sourceBounds": [
+        141,
+        157,
+        1114,
+        1098
+      ],
+      "traceSize": [
+        512,
+        495
+      ],
+      "paths": 15
+    },
+    "zoom-in": {
+      "sourceSha256": "7c1235cda0cf47caf847cbb7c844409b701c9351ee5fc13947f350f2741a1581",
+      "vectorSha256": "52f6debf6178e496da6047c92459d045181a379f58ea65821d0be363dc09b52b",
+      "sourceBounds": [
+        133,
+        144,
+        1127,
+        1123
+      ],
+      "traceSize": [
+        512,
+        504
+      ],
+      "paths": 18
+    },
+    "zoom-out": {
+      "sourceSha256": "ea3e20d0ae2d5290bbe20faf7b036d1a92e109b948aed9f5e6bf7ca3fe9e423a",
+      "vectorSha256": "f3e56148732b7e65b761883f78cbd5ba871fdf5272eda5f2a1b945fc95054ad8",
+      "sourceBounds": [
+        131,
+        132,
+        1132,
+        1122
+      ],
+      "traceSize": [
+        512,
+        506
+      ],
+      "paths": 14
+    },
+    "older": {
+      "sourceSha256": "d335c93fce89f19a206db84ed562e4f60b57664f5cb8eae829165c891994fab2",
+      "vectorSha256": "f2afd940e7371be858ed27c89ab0b2d7d10af5b4bffd24b7e5b1aa214824373d",
+      "sourceBounds": [
+        110,
+        135,
+        1149,
+        1118
+      ],
+      "traceSize": [
+        512,
+        484
+      ],
+      "paths": 8
+    },
+    "newer": {
+      "sourceSha256": "391d380895a31bf9b9fce49133b71333a967a522f4bcf4b05e0d2f705d91e451",
+      "vectorSha256": "98e9b4298034d459de52c786b8783c9a13f633ee004dd3abb93ef94621bcf935",
+      "sourceBounds": [
+        112,
+        136,
+        1146,
+        1118
+      ],
+      "traceSize": [
+        512,
+        486
+      ],
+      "paths": 13
+    },
+    "close": {
+      "sourceSha256": "b65f3001be4cdf1495ea53b19428a36a2efefdebea97864e7f8cfd4303f1c9f5",
+      "vectorSha256": "78d101618c22998872abbb49f2540e637edf7ab3a12dffa5b7b4f49a23eecb3e",
+      "sourceBounds": [
+        109,
+        134,
+        1147,
+        1119
+      ],
+      "traceSize": [
+        512,
+        486
+      ],
+      "paths": 9
+    },
+    "messages": {
+      "sourceSha256": "51a213ce584c6ec3d64ae7fa2acb3e7c7e77dd97bec696488461ec5f589f9c4b",
+      "vectorSha256": "e9629293a99eeb0b8f8f0bafa975e056e124e50a5f96d882d9c695d3b26a9f13",
+      "sourceBounds": [
+        111,
+        136,
+        1146,
+        1120
+      ],
+      "traceSize": [
+        512,
+        487
+      ],
+      "paths": 14
+    }
+  }
+}

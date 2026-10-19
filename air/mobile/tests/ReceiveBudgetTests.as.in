@@ -1,0 +1,95 @@
+package {
+    import flash.display.Sprite;
+    import flash.events.*;
+    import flash.desktop.NativeApplication;
+    import flash.utils.*;
+    public class ReceiveBudgetTests extends Sprite {
+        // PRODUCTION_CONSTANTS
+        private var socketConnection:FixtureSocket;
+        private var pendingReceiveSocket:FixtureSocket;
+        private var physicalSocketConnected:Boolean;
+        private var receiveTimer:Timer=new Timer(8,1);
+        private var partialRecordTimer:CountingTimer=new CountingTimer();
+        private var byteBuffer:ByteArray=new ByteArray();
+        private var seen:Array=[];
+        private var errors:Array=[];
+        private var now:int=0;
+        private var callbackCost:int=0;
+        private var action:Function;
+        private var checks:int=0;
+        public function ReceiveBudgetTests(){
+            try {
+                reset();append("one\x00two\x00three\x00");drainSocketData(socketConnection);
+                check(seen.join(",")=="one,two,three","ordered_complete_records");
+                check(!partialRecordTimer.running && !receiveTimer.running,"idle_has_no_timers");
+                reset();append("part");drainSocketData(socketConnection);
+                check(seen.length==0 && partialRecordTimer.running,"partial_waits");
+                append("ial\x00");drainSocketData(socketConnection);
+                check(seen[0]=="partial" && !partialRecordTimer.running,"partial_completed");
+                reset();var encoded:ByteArray=new ByteArray();encoded.writeUTFBytes("שלום🙂");
+                socketConnection.appendBytes(encoded,0,3);drainSocketData(socketConnection);
+                socketConnection.appendBytes(encoded,3,encoded.length-3);append("\x00");drainSocketData(socketConnection);
+                check(seen[0]=="שלום🙂","utf8_fragment_preserved");
+                reset();for(var i:int=0;i<100;i++)append(i+"\x00");drainSocketData(socketConnection);
+                check(seen.length==RECEIVE_RECORD_LIMIT && pendingReceiveSocket===socketConnection,"record_burst_yields");
+                finish();check(seen.length==100 && seen[99]=="99","burst_exactly_once");
+                reset();callbackCost=4;append("first\x00second\x00");drainSocketData(socketConnection);
+                check(seen.length==1 && pendingReceiveSocket===socketConnection,"expensive_record_yields");
+                finish();check(seen.join(",")=="first,second","expensive_order_preserved");
+                reset();var huge:String=new Array(70001).join("a");append(huge+"\x00");drainSocketData(socketConnection);
+                check(byteBuffer.length==RECEIVE_BYTE_LIMIT && seen.length==0,"large_record_byte_budget");
+                check(partialRecordTimer.resets==1,"partial_timer_once_per_slice_not_per_byte");
+                finish();check(seen.length==1 && seen[0].length==70000,"large_record_not_split_for_decryption");
+                reset();append("\x00");drainSocketData(socketConnection);check(errors.length==1,"empty_record_rejected");
+                reset();append(new Array(EK2Config.MAX_ENCODED_RECORD_BYTES+2).join("x"));drainSocketData(socketConnection);finish();
+                check(errors.length==1 && errors[0].indexOf("encoded limit")>=0,"oversize_rejected");
+                reset();append("bad\x00next\x00");action=function():Boolean{return false;};drainSocketData(socketConnection);
+                check(seen.length==1 && pendingReceiveSocket==null,"failed_record_stops");
+                reset();var previous:FixtureSocket=socketConnection;append("old\x00stale\x00");
+                action=function():Boolean{socketConnection=new FixtureSocket();return true;};drainSocketData(previous);
+                check(seen.length==1 && previous.bytesAvailable>0 && pendingReceiveSocket==null,"callback_replacement_stops_old_socket");
+                reset();append("old\x00next\x00");callbackCost=4;drainSocketData(socketConnection);previous=socketConnection;
+                retireSocketConnection(previous);check(pendingReceiveSocket==null && !receiveTimer.running && socketConnection==null,"retire_cancels_continuation");
+                resumeSocketData(null);check(seen.length==1,"retired_callback_noop");
+                reset();append("first\x00second\x00");callbackCost=4;drainSocketData(socketConnection);
+                socketConnection.addEventListener(Event.CHANGE,handleSocketData);socketConnection.dispatchEvent(new Event(Event.CHANGE));
+                check(seen.length==1,"new_data_cannot_bypass_scheduled_yield");finish();
+                reset();receiveTimer.addEventListener(TimerEvent.TIMER_COMPLETE,resumeSocketData);callbackCost=4;append("timer1\x00timer2\x00");drainSocketData(socketConnection);
+                setTimeout(function():void{try{check(seen.join(",")=="timer1,timer2","timer_continues_receive");trace("RECEIVE_BUDGET_PASS checks="+checks);NativeApplication.nativeApplication.exit(0);}catch(e:Error){failed(e);}},100);
+            }catch(error:Error){failed(error);}
+        }
+        private function reset():void{receiveTimer.reset();partialRecordTimer.reset();partialRecordTimer.resets=0;socketConnection=new FixtureSocket();pendingReceiveSocket=null;byteBuffer=new ByteArray();seen=[];errors=[];now=0;callbackCost=0;action=null;}
+        private function append(value:String):void{var b:ByteArray=new ByteArray();b.writeUTFBytes(value);socketConnection.appendBytes(b,0,b.length);}
+        private function finish():void{var guard:int=0;while(pendingReceiveSocket!=null){if(++guard>100)throw new Error("unbounded_continuation");receiveTimer.reset();resumeSocketData(null);}}
+        private function clock():int{return now;}
+        private function processEK2Record(record:String):Boolean{seen.push(record);now+=callbackCost;return action==null?true:action();}
+        private function failEncryptedConnection(message:String):void{errors.push(message);retireSocketConnection(socketConnection);partialRecordTimer.stop();byteBuffer=new ByteArray();}
+        private function check(ok:Boolean,label:String):void{if(!ok)throw new Error(label);checks++;}
+        private function failed(e:Error):void{trace("RECEIVE_BUDGET_FAIL "+e.message);NativeApplication.nativeApplication.exit(2);}
+        private function handleSocketConnection(e:Event):void{}
+        private function handleSocketDisconnection(e:Event):void{}
+        private function handleIOError(e:Event):void{}
+        private function handleSecurityError(e:Event):void{}
+        private function debugMessage(message:String):void{}
+        // PRODUCTION_METHODS
+    }
+}
+import flash.events.EventDispatcher;
+import flash.utils.ByteArray;
+class FixtureSocket extends EventDispatcher {
+    public var connected:Boolean=true;
+    private var buffer:ByteArray=new ByteArray();
+    public function get bytesAvailable():uint{return buffer.bytesAvailable;}
+    public function readUnsignedByte():uint{return buffer.readUnsignedByte();}
+    public function appendBytes(source:ByteArray,offset:uint,length:uint):void{var position:uint=buffer.position;buffer.position=buffer.length;buffer.writeBytes(source,offset,length);buffer.position=position;}
+    public function close():void{connected=false;}
+}
+
+class CountingTimer {
+    private var timer:flash.utils.Timer=new flash.utils.Timer(2000,1);
+    public var resets:int=0;
+    public function get running():Boolean{return timer.running;}
+    public function reset():void{resets++;timer.reset();}
+    public function start():void{timer.start();}
+    public function stop():void{timer.stop();}
+}

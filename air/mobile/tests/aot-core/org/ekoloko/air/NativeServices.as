@@ -1,0 +1,1 @@
+package org.ekoloko.air {import flash.events.EventDispatcher;public final class NativeServices {public static var assetGeneration:uint=1;public static var assetLoadsSuspended:Boolean=false;public static var events:EventDispatcher=new EventDispatcher();}}

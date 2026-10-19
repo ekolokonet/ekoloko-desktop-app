@@ -1,0 +1,66 @@
+{
+  "tool": "Built-in image_gen",
+  "transparent_background": true,
+  "prompts": [
+    {
+      "id": "overview",
+      "prompt": "Create ONE production game UI button sprite on a transparent background. Reference image is only a style reference: match the original Ekoloko blue square buttons in the BOTTOM toolbar (hand, key, glasses, map), not the text buttons above. Subject: Four cream-colored chunky arrows pointing outward diagonally, indicating zoom out to show the entire room. Art direction: early-2000s Flash cartoon game icon, hand-illustrated 2D vector-like shapes, slightly irregular light blue rounded square tile, subtle darker-blue lower/right shadow, thin warm-gray outlines on the cream foreground object, minimal soft highlights. Match the reference's palette and gentle playful linework very closely. Frontal view, one centered button, square canvas. Tile occupies 90% of image width/height with even transparent margin. Subject occupies 70% of tile, clearly readable when the whole button is 44x44 pixels. No typography, no words, no letters, no numerals, no other icons, no surrounding UI, no scenery, no white/checkerboard background, no gloss, no photorealism, no modern flat outline icon style. This single asset will replace a text button alongside the original bottom-toolbar assets.",
+      "reference": "source-landscape-history.png",
+      "source": "/Users/ransaymour/.codex/generated_images/01a126a7-f6de-7a81-9190-9a9b527378b7/exec-211e324d-5ac3-41d5-afe5-a571984efc8a.png"
+    },
+    {
+      "id": "follow",
+      "prompt": "Create ONE production game UI button sprite on a transparent background. Reference image is only a style reference: match the original Ekoloko blue square buttons in the BOTTOM toolbar (hand, key, glasses, map), not the text buttons above. Subject: A tiny cream and golden cartoon person silhouette centered inside four small framing corners, indicating return camera to my character. Art direction: early-2000s Flash cartoon game icon, hand-illustrated 2D vector-like shapes, slightly irregular light blue rounded square tile, subtle darker-blue lower/right shadow, thin warm-gray outlines on the cream foreground object, minimal soft highlights. Match the reference's palette and gentle playful linework very closely. Frontal view, one centered button, square canvas. Tile occupies 90% of image width/height with even transparent margin. Subject occupies 70% of tile, clearly readable when the whole button is 44x44 pixels. No typography, no words, no letters, no numerals, no other icons, no surrounding UI, no scenery, no white/checkerboard background, no gloss, no photorealism, no modern flat outline icon style. This single asset will replace a text button alongside the original bottom-toolbar assets.",
+      "reference": "source-landscape-history.png",
+      "source": "/Users/ransaymour/.codex/generated_images/01a126a7-f6de-7a81-9190-9a9b527378b7/exec-2d30da83-8517-4b7b-8b8e-80e852464048.png"
+    },
+    {
+      "id": "rotate",
+      "prompt": "Create ONE production game UI button sprite on a transparent background. Reference image is only a style reference: match the original Ekoloko blue square buttons in the BOTTOM toolbar (hand, key, glasses, map), not the text buttons above. Subject: A cream rounded rectangular view tilted diagonally, surrounded by two curved golden yellow arrows, indicating rotate between portrait and landscape. Art direction: early-2000s Flash cartoon game icon, hand-illustrated 2D vector-like shapes, slightly irregular light blue rounded square tile, subtle darker-blue lower/right shadow, thin warm-gray outlines on the cream foreground object, minimal soft highlights. Match the reference's palette and gentle playful linework very closely. Frontal view, one centered button, square canvas. Tile occupies 90% of image width/height with even transparent margin. Subject occupies 70% of tile, clearly readable when the whole button is 44x44 pixels. No typography, no words, no letters, no numerals, no other icons, no surrounding UI, no scenery, no white/checkerboard background, no gloss, no photorealism, no modern flat outline icon style. This single asset will replace a text button alongside the original bottom-toolbar assets.",
+      "reference": "source-landscape-history.png",
+      "source": "/Users/ransaymour/.codex/generated_images/01a126a7-f6de-7a81-9190-9a9b527378b7/exec-c0f1f1b2-dd53-4a56-ae1e-e5b35ba4c278.png"
+    },
+    {
+      "id": "opacity",
+      "prompt": "Create ONE production game UI button sprite on a transparent background. Reference image is only a style reference: match the original Ekoloko blue square buttons in the BOTTOM toolbar (hand, key, glasses, map), not the text buttons above. Subject: Two overlapping translucent cream and pale blue rounded cards, one see-through, indicating adjust transparency. Art direction: early-2000s Flash cartoon game icon, hand-illustrated 2D vector-like shapes, slightly irregular light blue rounded square tile, subtle darker-blue lower/right shadow, thin warm-gray outlines on the cream foreground object, minimal soft highlights. Match the reference's palette and gentle playful linework very closely. Frontal view, one centered button, square canvas. Tile occupies 90% of image width/height with even transparent margin. Subject occupies 70% of tile, clearly readable when the whole button is 44x44 pixels. No typography, no words, no letters, no numerals, no other icons, no surrounding UI, no scenery, no white/checkerboard background, no gloss, no photorealism, no modern flat outline icon style. This single asset will replace a text button alongside the original bottom-toolbar assets.",
+      "reference": "source-landscape-history.png",
+      "source": "/Users/ransaymour/.codex/generated_images/01a126a7-f6de-7a81-9190-9a9b527378b7/exec-c2082000-0ff2-4a1a-bc0f-51f6712097d9.png"
+    },
+    {
+      "id": "zoom-in",
+      "prompt": "Create ONE production game UI button sprite on a transparent background. Reference image is only a style reference: match the original Ekoloko blue square buttons in the BOTTOM toolbar (hand, key, glasses, map), not the text buttons above. Subject: A chunky cream magnifying glass with a golden yellow handle and a clearly visible blue plus sign inside its lens. Art direction: early-2000s Flash cartoon game icon, hand-illustrated 2D vector-like shapes, slightly irregular light blue rounded square tile, subtle darker-blue lower/right shadow, thin warm-gray outlines on the cream foreground object, minimal soft highlights. Match the reference's palette and gentle playful linework very closely. Frontal view, one centered button, square canvas. Tile occupies 90% of image width/height with even transparent margin. Subject occupies 70% of tile, clearly readable when the whole button is 44x44 pixels. No typography, no words, no letters, no numerals, no other icons, no surrounding UI, no scenery, no white/checkerboard background, no gloss, no photorealism, no modern flat outline icon style. This single asset will replace a text button alongside the original bottom-toolbar assets.",
+      "reference": "source-landscape-history.png",
+      "source": "/Users/ransaymour/.codex/generated_images/01a126a7-f6de-7a81-9190-9a9b527378b7/exec-b9731e7a-e90b-4eba-964e-270ce040d335.png"
+    },
+    {
+      "id": "zoom-out",
+      "prompt": "Create ONE production game UI button sprite on a transparent background. Reference image is only a style reference: match the original Ekoloko blue square buttons in the BOTTOM toolbar (hand, key, glasses, map), not the text buttons above. Subject: A chunky cream magnifying glass with a golden yellow handle and a clearly visible blue minus sign inside its lens. Art direction: early-2000s Flash cartoon game icon, hand-illustrated 2D vector-like shapes, slightly irregular light blue rounded square tile, subtle darker-blue lower/right shadow, thin warm-gray outlines on the cream foreground object, minimal soft highlights. Match the reference's palette and gentle playful linework very closely. Frontal view, one centered button, square canvas. Tile occupies 90% of image width/height with even transparent margin. Subject occupies 70% of tile, clearly readable when the whole button is 44x44 pixels. No typography, no words, no letters, no numerals, no other icons, no surrounding UI, no scenery, no white/checkerboard background, no gloss, no photorealism, no modern flat outline icon style. This single asset will replace a text button alongside the original bottom-toolbar assets.",
+      "reference": "source-landscape-history.png",
+      "source": "/Users/ransaymour/.codex/generated_images/01a126a7-f6de-7a81-9190-9a9b527378b7/exec-59f375f2-dc18-430e-a555-ac45e7f41155.png"
+    },
+    {
+      "id": "older",
+      "prompt": "Create ONE production transparent game UI button sprite. Match the supplied approved reference button's blue irregular rounded square tile, dark blue bottom shadow, cream foreground and warm gray outline exactly. Replace the four arrows with one chunky upward arrow to scroll to older messages. Same early-2000s Flash cartoon art, gentle highlights, 2D vector-like large simple shapes, readable at 44 pixels. One centered button on a square transparent canvas, even 8% margins. No words, labels, text, scenery, extra buttons, white background, or checkerboard. Keep the reference's palette, line weight and playful shape style.",
+      "reference": "overview.png",
+      "source": "/Users/ransaymour/.codex/generated_images/01a126a7-f6de-7a81-9190-9a9b527378b7/exec-0feea2ee-6476-47f6-b811-3c2f017798bc.png"
+    },
+    {
+      "id": "newer",
+      "prompt": "Create ONE production transparent game UI button sprite. Match the supplied approved reference button's blue irregular rounded square tile, dark blue bottom shadow, cream foreground and warm gray outline exactly. Replace the four arrows with one chunky downward arrow above a small horizontal bar, meaning jump to the latest messages. Same early-2000s Flash cartoon art, gentle highlights, 2D vector-like large simple shapes, readable at 44 pixels. One centered button on a square transparent canvas, even 8% margins. No words, labels, text, scenery, extra buttons, white background, or checkerboard. Keep the reference's palette, line weight and playful shape style.",
+      "reference": "overview.png",
+      "source": "/Users/ransaymour/.codex/generated_images/01a126a7-f6de-7a81-9190-9a9b527378b7/exec-42a1b5df-0ea4-47d6-b068-0395b73ce859.png"
+    },
+    {
+      "id": "close",
+      "prompt": "Create ONE production transparent game UI button sprite. Match the supplied approved reference button's blue irregular rounded square tile, dark blue bottom shadow, cream foreground and warm gray outline exactly. Replace the four arrows with one large cream diagonal cross X, a close-window pictogram, not a letter. Same early-2000s Flash cartoon art, gentle highlights, 2D vector-like large simple shapes, readable at 44 pixels. One centered button on a square transparent canvas, even 8% margins. No words, labels, text, scenery, extra buttons, white background, or checkerboard. Keep the reference's palette, line weight and playful shape style.",
+      "reference": "overview.png",
+      "source": "/Users/ransaymour/.codex/generated_images/01a126a7-f6de-7a81-9190-9a9b527378b7/exec-ca5edfae-28e9-4316-8025-6a6b16e8aada.png"
+    },
+    {
+      "id": "messages",
+      "prompt": "Create ONE production transparent game UI button sprite. Match the supplied approved reference button's blue irregular rounded square tile, dark blue bottom shadow, cream foreground and warm gray outline exactly. Replace the four arrows with two overlapping cream speech bubbles, no writing inside. Same early-2000s Flash cartoon art, gentle highlights, 2D vector-like large simple shapes, readable at 44 pixels. One centered button on a square transparent canvas, even 8% margins. No words, labels, text, scenery, extra buttons, white background, or checkerboard. Keep the reference's palette, line weight and playful shape style.",
+      "reference": "overview.png",
+      "source": "/Users/ransaymour/.codex/generated_images/01a126a7-f6de-7a81-9190-9a9b527378b7/exec-616ac0ba-54d8-478e-887c-fe901e0e32e0.png"
+    }
+  ]
+}

@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<application xmlns="http://ns.adobe.com/air/application/51.3">
+  <id>org.ekoloko.mobilelab</id>
+  <versionNumber>0.1.0</versionNumber>
+  <filename>EkolokoMobileLab</filename>
+  <name>Ekoloko Mobile Lab</name>
+  <initialWindow>
+    <content>MobileLab.swf</content>
+    <title>Ekoloko — Mobile Input Lab</title>
+    <visible>true</visible>
+    <width>844</width><height>390</height>
+    <aspectRatio>landscape</aspectRatio><autoOrients>true</autoOrients>
+    <fullScreen>true</fullScreen><renderMode>direct</renderMode>
+    <softKeyboardBehavior>none</softKeyboardBehavior>
+    <requestedDisplayResolution>high</requestedDisplayResolution>
+  </initialWindow>
+  <supportedProfiles>mobileDevice</supportedProfiles>
+  <iPhone><InfoAdditions><![CDATA[
+    <key>UIDeviceFamily</key><array><string>1</string><string>2</string></array>
+  ]]></InfoAdditions></iPhone>
+</application>

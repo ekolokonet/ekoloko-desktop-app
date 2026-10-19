@@ -1,0 +1,1335 @@
+{
+  "schema": 1,
+  "parents": {
+    "main.swf": "c3357a6dd1cb2665606be1ba083cc82e360799c6b0ab591844e28cd3ba0ca3e5",
+    "shell.swf": "c2b12f92238b6e052de5ebeca99f6db6037626dd698e5712f33b18e596ea9243"
+  },
+  "catalogFingerprint": "d02983080ab585b04384d3a53c2ebb8e13045c998bf601ac1358a918dbc48314",
+  "runtime": "desktop AIR ADL",
+  "aotRuntimeTested": false,
+  "physicalDeviceTested": false,
+  "objects": {
+    "02e81988a6b10508153f55ec0f414193876da6f51fe429e114acaa0367563782": {
+      "objectFingerprint": "f8516722586529598a7abbb5606f9f64785c78a7ef93db58c7fa24a0eaecba03",
+      "equivalent": true,
+      "allRootFrames": true,
+      "cloneParity": true,
+      "getMCParity": true,
+      "testedParents": [
+        "shell",
+        "main",
+        "currentDomain"
+      ],
+      "mainOnlyDefinitions": [
+        "EmotionMC"
+      ],
+      "inputSha256": "50405ede996913aa000ff82eb9220dc815ba4085c58bb5ea5301e829a59b0106",
+      "candidateSha256": "e4111ad3a6c260e5327984141e3f6204ad2b2e1d2cf83adf34f70aa9112305c1"
+    },
+    "adfda76fee4bf8e2875f2aa07bc1b756ece571c31c37890fae552842642c55b5": {
+      "objectFingerprint": "1c8e3fec501183e453bb82142db48a548cee49fcd63664de7aa17bcb7d764927",
+      "equivalent": true,
+      "allRootFrames": true,
+      "cloneParity": true,
+      "getMCParity": true,
+      "testedParents": [
+        "shell",
+        "main",
+        "currentDomain"
+      ],
+      "mainOnlyDefinitions": [
+        "EmotionMC"
+      ],
+      "inputSha256": "c018c1ff43921aff1eaf0257aed82aa5ed7fb7fc38c63440165db66e8132e718",
+      "candidateSha256": "a716d2237645cd5d6ebae64e6f24fe69c943409646233408813a76e63d12b222"
+    },
+    "352a28d277ef4a530f7fa863392157339dad0d506a3596ea15513b6563caf12b": {
+      "objectFingerprint": "dfdabce0b07390a9b05ea1e30d04bdb50aa4f7b5bf9a23e084978a7d2e8cd19b",
+      "equivalent": true,
+      "allRootFrames": true,
+      "cloneParity": true,
+      "getMCParity": true,
+      "testedParents": [
+        "shell",
+        "main",
+        "currentDomain"
+      ],
+      "mainOnlyDefinitions": [
+        "EmotionMC"
+      ],
+      "inputSha256": "2534218db20ff502a4cdbf3e7aab8212ba9adfb85d6a11ecf703995e58fa806b",
+      "candidateSha256": "3cd2ac8496de478592d62b3da31c500bc3b229ecc72093532db99db5e3645f83"
+    },
+    "5467027fa7666a83cc81ea24a9b497f780bdcfedf239b8a44e50ede317a891d8": {
+      "objectFingerprint": "2cc125aa6dc307e577b56d27e71b17baf15d6173c6bc01a122c4733d98baf063",
+      "equivalent": true,
+      "allRootFrames": true,
+      "cloneParity": true,
+      "getMCParity": true,
+      "testedParents": [
+        "shell",
+        "main",
+        "currentDomain"
+      ],
+      "mainOnlyDefinitions": [
+        "EmotionMC"
+      ],
+      "inputSha256": "38ede9b38c6985aa194d1d4c9a647ece61a87d03d91da5986c354407cca3d45d",
+      "candidateSha256": "6f29631830bc2d5ab99aa756925fae49cf1b175d37810d544481e81f5d162985"
+    },
+    "73ee74907b10f41a253a4180f0d7600c63ce62c6fb8259fda635d9225afe49b9": {
+      "objectFingerprint": "35cab7030162864c8fbe56ea60d774e3226080af0306fc9339a04112ef469226",
+      "equivalent": true,
+      "allRootFrames": true,
+      "cloneParity": true,
+      "getMCParity": true,
+      "testedParents": [
+        "shell",
+        "main",
+        "currentDomain"
+      ],
+      "mainOnlyDefinitions": [
+        "EmotionMC"
+      ],
+      "inputSha256": "e137b1e56ebb38cb8c2678799a138b57edf84a4803d19455b4bf52166e6e3ba5",
+      "candidateSha256": "de770cce6d932f9b78fa54d65196a67c6f83abae7a2f03e67fffe2951231448a"
+    },
+    "2aded62a4fbea30f2f812c0bcb7773530a9d60d3bcf5fa52efee3056e36dae8a": {
+      "objectFingerprint": "fdfdb1e8ea7f26f5d61b20eb0531e44ff7ed3e9c54413ca976a676bdd4b798c5",
+      "equivalent": true,
+      "allRootFrames": true,
+      "cloneParity": true,
+      "getMCParity": true,
+      "testedParents": [
+        "shell",
+        "main",
+        "currentDomain"
+      ],
+      "mainOnlyDefinitions": [
+        "EmotionMC"
+      ],
+      "inputSha256": "ff8c06f94c00fa23d2286446e4c2bd0af18b7ae408b666a6f5f84ce0cd999d5c",
+      "candidateSha256": "8fdb5f38328689dbfa3b9a581c40b2099cf8792ae8f6133d07a27db13a13f7ee"
+    },
+    "2d88d001397a0a38e7521de90e25c96cd772e2fee65af89b264b1d52c10d5746": {
+      "objectFingerprint": "2bd3b5c4c994c552c3bdf5087094353a86d3dc93078a9a7162dc599a73d6aa8c",
+      "equivalent": true,
+      "allRootFrames": true,
+      "cloneParity": true,
+      "getMCParity": true,
+      "testedParents": [
+        "shell",
+        "main",
+        "currentDomain"
+      ],
+      "mainOnlyDefinitions": [
+        "EmotionMC"
+      ],
+      "inputSha256": "d81e26a4ef767e66b6eed2effedbf1977543be933ee0506c6e811864e995b9a2",
+      "candidateSha256": "4f3c357217abc9f26ff4d6efd74155fd8af2ca758d3174f0ba504d617c1e7f9f"
+    },
+    "9be7a3a5be1bdd401732fab0a8a7f2a0eee4ccffd673dec2ad36970f0b232d0a": {
+      "objectFingerprint": "0867eed1e09a015fbf908e6faa5fa4c2bcbe2fe1d2b58f3ece83e2914e12a97d",
+      "equivalent": true,
+      "allRootFrames": true,
+      "cloneParity": true,
+      "getMCParity": true,
+      "testedParents": [
+        "shell",
+        "main",
+        "currentDomain"
+      ],
+      "mainOnlyDefinitions": [
+        "EmotionMC"
+      ],
+      "inputSha256": "8bbe3c7eabdefc2c2632ab0d1c282521a0ca87bdfd8679b8598d585ca0361ec8",
+      "candidateSha256": "36bd0d055666e9febb7e1ab1925be0296965de56ce608a97454427852fceaede"
+    },
+    "d2890bf39aad03310fea93a27abf0fcc39cb4ff640b442203f69bbe2dad5e58b": {
+      "objectFingerprint": "469f33eddab7f2a99dce17a7972d3c18d82f2f78bb5efbc81f839c66fac7a50b",
+      "equivalent": true,
+      "allRootFrames": true,
+      "cloneParity": true,
+      "getMCParity": true,
+      "testedParents": [
+        "shell",
+        "main",
+        "currentDomain"
+      ],
+      "mainOnlyDefinitions": [
+        "EmotionMC"
+      ],
+      "inputSha256": "7dab9e5be7818ec01da3ed7a924719df390607448ce6f8c341b3363dbb43d75d",
+      "candidateSha256": "1a33c590a61868a96e63d83d327047dc5eacaa65ca41fd45998f39fb4207b818"
+    },
+    "061d4e0ffed7126a7696246eb703b1fbf5c8411c672bf13d4f3d7b2a907b4684": {
+      "objectFingerprint": "dfbc7be36daca8609af16d461d407ce3bbcffb676e519cfecd3637a5e6760593",
+      "equivalent": true,
+      "allRootFrames": true,
+      "cloneParity": true,
+      "getMCParity": true,
+      "testedParents": [
+        "shell",
+        "main",
+        "currentDomain"
+      ],
+      "mainOnlyDefinitions": [
+        "EmotionMC"
+      ],
+      "inputSha256": "3f02e7360a8b791bc33b1269fc168603c0296c365b74e6b99a3887285ae6331f",
+      "candidateSha256": "52a8cc27f9efe0c06a7c588e7c30088b2f7c7b5d4390d10959b82350421a92cf"
+    },
+    "1ebe6dc2f8f0d297824a1432de21a1c5e9b878d0688a49f12b3dfb9e60dc34c7": {
+      "objectFingerprint": "72e163577898387e8c3349a9360eb24089b63d242f8e101985d87727607c8c94",
+      "equivalent": true,
+      "allRootFrames": true,
+      "cloneParity": true,
+      "getMCParity": true,
+      "testedParents": [
+        "shell",
+        "main",
+        "currentDomain"
+      ],
+      "mainOnlyDefinitions": [
+        "EmotionMC"
+      ],
+      "inputSha256": "f4e5d2796302c96e1c4a079f957675c9ed07c7763b9eb42941c46038c7f9213a",
+      "candidateSha256": "e6a581025afb640e42d458bfe359b9f7d02da678f42d54285b14cdfbe2c5cf88"
+    },
+    "80f4215056e6aee7a6e95383474fd72ef3c16a1e27e29fde71443b49981b2a87": {
+      "objectFingerprint": "8c3e66ab956de37b41c90cf8b861bd936a08048ad728813931f4675dbaeea87b",
+      "equivalent": true,
+      "allRootFrames": true,
+      "cloneParity": true,
+      "getMCParity": true,
+      "testedParents": [
+        "shell",
+        "main",
+        "currentDomain"
+      ],
+      "mainOnlyDefinitions": [
+        "EmotionMC"
+      ],
+      "inputSha256": "0d07c88c59ef21b0970cdf8733ea25d34ab9538d84a24a98cf220d41e144e8de",
+      "candidateSha256": "8b6b806739a5397e152f42b0e098400e6b69bcc6beeb6865a63538d2a3831bb7"
+    },
+    "b76a81b618b94199c90a734bc7b0b7bf561ef4226d5c8d87532138e71b9761b9": {
+      "objectFingerprint": "166bc745b7e6d6ba1a4457a8e574b5c28f6442e557e614c66b5fe697249dd60c",
+      "equivalent": true,
+      "allRootFrames": true,
+      "cloneParity": true,
+      "getMCParity": true,
+      "testedParents": [
+        "shell",
+        "main",
+        "currentDomain"
+      ],
+      "mainOnlyDefinitions": [
+        "EmotionMC"
+      ],
+      "inputSha256": "7cd90859a65f799348361afe0e4982d7fd6a143433c39b3e020b7e2f780ec321",
+      "candidateSha256": "2cbb9cb57ed59b63efaa3b5771c770978f5b847695d882fa2d231404e24f828c"
+    },
+    "88df414f35b650a73d36dae75194d7706a0b34cee2e982273a89877b3ebc129d": {
+      "objectFingerprint": "b32bf55e9a91ff596fca9e5eebb19560e530819a8b0f4b46bd9c8ebf188baf57",
+      "equivalent": true,
+      "allRootFrames": true,
+      "cloneParity": true,
+      "getMCParity": true,
+      "testedParents": [
+        "shell",
+        "main",
+        "currentDomain"
+      ],
+      "mainOnlyDefinitions": [
+        "EmotionMC"
+      ],
+      "inputSha256": "2526bbfdcc120c286ca3eb9640cee5cf91d9a69ee9f191162b5d4e4c8bdbe19b",
+      "candidateSha256": "5e035dabbce906616007589fccb2928d8ae3b76c0f7585f4abeea043e7c7d12a"
+    },
+    "5c9f0c92a13c2266c32257c4212ed2c7382f7f1cc6ad2393ed1241d7a0e6f8b5": {
+      "objectFingerprint": "8fa67796c426c132a6f00a529b5438388e1ab16bd8927eae6de5383402af2610",
+      "equivalent": true,
+      "allRootFrames": true,
+      "cloneParity": true,
+      "getMCParity": true,
+      "testedParents": [
+        "shell",
+        "main",
+        "currentDomain"
+      ],
+      "mainOnlyDefinitions": [
+        "EmotionMC"
+      ],
+      "inputSha256": "3c65b9b5ca0a3a92cbd69fa0b5f1730441bb3714c6d9e4768216a00f59cf7e09",
+      "candidateSha256": "56c642bd05ef787a09820cbcca7f6a7a8e336e197d2accb59e6121cfe38fb8cb"
+    },
+    "42b0dbd954b417acf7e33b96f903c5bc520744fac70ea536b320e11a942f1d56": {
+      "objectFingerprint": "34930fe32e00257289fa0fa7c16f1b63a422dcd21489d478868c46b02f2788d1",
+      "equivalent": true,
+      "allRootFrames": true,
+      "cloneParity": true,
+      "getMCParity": true,
+      "testedParents": [
+        "shell",
+        "main",
+        "currentDomain"
+      ],
+      "mainOnlyDefinitions": [
+        "EmotionMC"
+      ],
+      "inputSha256": "ed75294073608cccee322495cd4418f5ea813c8b78e0b4c40a1f439b10f0f610",
+      "candidateSha256": "27cde8765f631e686bf4646c9a0f46ced996f638eb33fd5e06070aa25813cfdf"
+    },
+    "7649d54f319f204b2d864aac4fe7304d151a4128dfc6ecfaff890a3dfa7ae40f": {
+      "objectFingerprint": "27922d6e9f26714a0427ef03e81069411f364f046748c7ab3b0497c67ee6d0df",
+      "equivalent": true,
+      "allRootFrames": true,
+      "cloneParity": true,
+      "getMCParity": true,
+      "testedParents": [
+        "shell",
+        "main",
+        "currentDomain"
+      ],
+      "mainOnlyDefinitions": [
+        "EmotionMC"
+      ],
+      "inputSha256": "9ea7cf854e6b6719b4ab966105baa386676399e626b940584647b07d4853dc61",
+      "candidateSha256": "880709b180fcb09e7d1a770c097e391aff2ecf90d3c6e5115a02d21c8205f3e6"
+    },
+    "98e37f60e53391c8e664057e8d1d950c403431778eb4e22175fb25eb8aec98a7": {
+      "objectFingerprint": "297039fe99d9332642d25d4b3050a77f6b046e88df92047fec60e6a95a049449",
+      "equivalent": true,
+      "allRootFrames": true,
+      "cloneParity": true,
+      "getMCParity": true,
+      "testedParents": [
+        "shell",
+        "main",
+        "currentDomain"
+      ],
+      "mainOnlyDefinitions": [
+        "EmotionMC"
+      ],
+      "inputSha256": "f68ee2511f9a77e30608ddca470b933547e9da02271201a5b26c19efc48edcaa",
+      "candidateSha256": "83b754552c0e778c4e133049e2faa291dce265f751b7cc09121729145dd5e78d"
+    },
+    "48d2b9a3d01f334f3e138ff660b61f169f350fdd4a8fc2aafef10a6f12ada4ef": {
+      "objectFingerprint": "cfc3c94f2c026d3e969d0b6ec46863d270a3dd649b1c06c8ce6ded8854faee90",
+      "equivalent": true,
+      "allRootFrames": true,
+      "cloneParity": true,
+      "getMCParity": true,
+      "testedParents": [
+        "shell",
+        "main",
+        "currentDomain"
+      ],
+      "mainOnlyDefinitions": [
+        "EmotionMC"
+      ],
+      "inputSha256": "89b10ca19c79ff4841483296fd7e1ccad0599a38fb96be1e4826b5c0895e7247",
+      "candidateSha256": "59ec66fd5d8161e582a4ea54eab3be70fb6faaa92e07a78d6055c22448be7a5d"
+    },
+    "0eca0e7136aa24444f030a95fdaa2d33b7346227e9202bf498ed3f44414f5a26": {
+      "objectFingerprint": "e146f670bca68f470f81aad560fb2c88582ce9577025b67f93a09794aded93fb",
+      "equivalent": true,
+      "allRootFrames": true,
+      "cloneParity": true,
+      "getMCParity": true,
+      "testedParents": [
+        "shell",
+        "main",
+        "currentDomain"
+      ],
+      "mainOnlyDefinitions": [
+        "EmotionMC"
+      ],
+      "inputSha256": "a1d73f496e457e130bf27cc5b54fe48b76532ca8805e1538e6941563a30f561e",
+      "candidateSha256": "2972f6522f132cb7987f9832ebabf8a9e99a138fb2791d570641a0cafd84312f"
+    },
+    "9d1ddfed11d74525246640cc7fb76cdf73402e21fd9948e56e07e80f3a7d857f": {
+      "objectFingerprint": "8e5b7f1713da46dd712b56085d9ec44ded568ede47aead2a050882b7f54e4d23",
+      "equivalent": true,
+      "allRootFrames": true,
+      "cloneParity": true,
+      "getMCParity": true,
+      "testedParents": [
+        "shell",
+        "main",
+        "currentDomain"
+      ],
+      "mainOnlyDefinitions": [
+        "EmotionMC"
+      ],
+      "inputSha256": "e5382a18db535c384b402caaa2317c6515b5b70bdd8c1126e9d0e666af66fcb7",
+      "candidateSha256": "71bf651e3b7bb49f05c970f0f69bc29ee57f2dd26697f0b61e6ff06a1bcf7317"
+    },
+    "aecee1fa30fe1bfaaa2f940b7a2a9bd1252b9bab31a62963165a5df604c26c55": {
+      "objectFingerprint": "4c45d299a731c119eddf3947289a7297238c0fb4a2a033eb37708cbc85c1e5ea",
+      "equivalent": true,
+      "allRootFrames": true,
+      "cloneParity": true,
+      "getMCParity": true,
+      "testedParents": [
+        "shell",
+        "main",
+        "currentDomain"
+      ],
+      "mainOnlyDefinitions": [
+        "EmotionMC"
+      ],
+      "inputSha256": "e56927ea201163ad6578a5b44a12ba38d86abef73412714bd3899f5f15d70bd1",
+      "candidateSha256": "2696216cdb846eb0525bd53c6c787c1e5e8334d00f0dc70ceac56d1ee6e6cadd"
+    },
+    "b7a5934556cc430e0f5bf9b529feb0ae6c6c183efee39cded07e949fe64e1e28": {
+      "objectFingerprint": "aba9d3bf604926aa57256b8d288d1c8979ebb40e0c51c7874819cac3c0e4747e",
+      "equivalent": true,
+      "allRootFrames": true,
+      "cloneParity": true,
+      "getMCParity": true,
+      "testedParents": [
+        "shell",
+        "main",
+        "currentDomain"
+      ],
+      "mainOnlyDefinitions": [
+        "EmotionMC"
+      ],
+      "inputSha256": "5a0a8f4e0293c2a520f7359e55183be5291bd02e31ce333f3d7edcfa9c3ef9e2",
+      "candidateSha256": "13c1892bb7dfb2da5a17544359822ee778b51ca3af6bad97cda803afe1380349"
+    },
+    "a419496c2c03c741b6d715f1e4c18dc665f573a645a1a942963f191268ffb3b5": {
+      "objectFingerprint": "3d4f1f9886bc11a1f8b60aa68becf6d29db3b2ff970bfb21adecbad7b0de6cc2",
+      "equivalent": true,
+      "allRootFrames": true,
+      "cloneParity": true,
+      "getMCParity": true,
+      "testedParents": [
+        "shell",
+        "main",
+        "currentDomain"
+      ],
+      "mainOnlyDefinitions": [
+        "EmotionMC"
+      ],
+      "inputSha256": "dcd957d2dafb93dda1e8b0e895c9e38b12c7b664a3e6e3b862790b6fdbc08070",
+      "candidateSha256": "60cca24b388fdc94bf0278ea662dcfe631a97f5c9c90edc2c75f3da860a4e73a"
+    },
+    "41950bc50d7e80ec68aebaf82546c3a9bb1c0cee0cf2c889865affc3ac6a7b13": {
+      "objectFingerprint": "208078b2f8ef2b05788149aa978e48e505c6c123cd87dba50d624bbb69d71ca4",
+      "equivalent": true,
+      "allRootFrames": true,
+      "cloneParity": true,
+      "getMCParity": true,
+      "testedParents": [
+        "shell",
+        "main",
+        "currentDomain"
+      ],
+      "mainOnlyDefinitions": [
+        "EmotionMC"
+      ],
+      "inputSha256": "1c449de3cc38c441fc9caa71c23bc0fa295aa9c86251c3b31d8334763c43f8dd",
+      "candidateSha256": "47157ea595c3e4b300b064e130dda7eea959f9294391a7e9a7623a4b0184a66c"
+    },
+    "1f75efcc1eabea788d89ec5be937fa56064d938052d053958c168c393b0cd371": {
+      "objectFingerprint": "1fd21dc76b8a36440152547dc47f4a857e5b6ff43573e05eefd49af2375c38dc",
+      "equivalent": true,
+      "allRootFrames": true,
+      "cloneParity": true,
+      "getMCParity": true,
+      "testedParents": [
+        "shell",
+        "main",
+        "currentDomain"
+      ],
+      "mainOnlyDefinitions": [
+        "EmotionMC"
+      ],
+      "inputSha256": "d35187ef2700efa22648603bb184c84ae578bc2bd3e2485baf286de3c290d206",
+      "candidateSha256": "f8f85cb7c24faa6a8f12d852423c9607688e32e31071e43352900ff34daf83bb"
+    },
+    "067020738c99aaeae0b7a398fc4541789c485abb20ff7c3b12420f9d22df011d": {
+      "objectFingerprint": "eec9f566880fbb126c48d9d9caabf07663d78f2a78ee35a7a469b641465a211c",
+      "equivalent": true,
+      "allRootFrames": true,
+      "cloneParity": true,
+      "getMCParity": true,
+      "testedParents": [
+        "shell",
+        "main",
+        "currentDomain"
+      ],
+      "mainOnlyDefinitions": [
+        "EmotionMC"
+      ],
+      "inputSha256": "b5f1db95a5326f28154bfaf84cfe5ede5de1d658d657a59770b2726dffe2a5da",
+      "candidateSha256": "9ae6d7e9185e3f16b010aaf3bb0f7507d9e26dd3d1f0c7ff3c03aee84f6d69b0"
+    },
+    "7626fe74ac382d165cb165412e86505f4f310adeaa0f40b1099ef04292799926": {
+      "objectFingerprint": "fd1b94b2616af3e0639c080d44f411a5a074a77833b0aab0a917923f06e55420",
+      "equivalent": true,
+      "allRootFrames": true,
+      "cloneParity": true,
+      "getMCParity": true,
+      "testedParents": [
+        "shell",
+        "main",
+        "currentDomain"
+      ],
+      "mainOnlyDefinitions": [
+        "EmotionMC"
+      ],
+      "inputSha256": "41ba813856d6f0fbe7ea7d0db91bf44af0c33716da236a033ee6434d8e0c7a1b",
+      "candidateSha256": "5524ae45d1e163a98e69a567340b4dab8778a2a9f3e1210fea83ad14dbb97493"
+    },
+    "b84049fdd1cea4e16302af2bda9124b2d405256277ac7cfa656725ea197f758e": {
+      "objectFingerprint": "9af1f794b34121df6f4d2e72ebab6652130aee520c3713a6680a4cb4b2f689d5",
+      "equivalent": true,
+      "allRootFrames": true,
+      "cloneParity": true,
+      "getMCParity": true,
+      "testedParents": [
+        "shell",
+        "main",
+        "currentDomain"
+      ],
+      "mainOnlyDefinitions": [
+        "EmotionMC"
+      ],
+      "inputSha256": "09923797c9fb749548851f2149446f52ae1be0700d8a676529331b68ce23b0ef",
+      "candidateSha256": "322c40611cb135153c65f8d92c120ae81006b697a624a8501067cf6f42acfdad"
+    },
+    "3b2a99501413f1be7cbc8858c28f8d5a669172a6e964ec650bdc76f8b8252985": {
+      "objectFingerprint": "6f66f9e6e7e48c025472f9af68f22dffcf740b78b4af8e8e2f0d5b9f23dcd3a4",
+      "equivalent": true,
+      "allRootFrames": true,
+      "cloneParity": true,
+      "getMCParity": true,
+      "testedParents": [
+        "shell",
+        "main",
+        "currentDomain"
+      ],
+      "mainOnlyDefinitions": [
+        "EmotionMC"
+      ],
+      "inputSha256": "347e8b0629c06ffae60a3f0e22b5bd33c017cc7d98e99a7355b185b418c81e6d",
+      "candidateSha256": "0daa2b77eb1db0dfcfd5f8551502481ebcb86a03c0f0a62f72ec72fa5719a6db"
+    },
+    "93a7d73675e1197c19cc03879aab7ef7520bfa64980f22bdc97db455c2fd7261": {
+      "objectFingerprint": "23256c36ab24dcb5636f10155e58d6bc75e213af017bcc57b3befe9365eca653",
+      "equivalent": true,
+      "allRootFrames": true,
+      "cloneParity": true,
+      "getMCParity": true,
+      "testedParents": [
+        "shell",
+        "main",
+        "currentDomain"
+      ],
+      "mainOnlyDefinitions": [
+        "EmotionMC"
+      ],
+      "inputSha256": "7011b17baf66a974fd64f192f717376235b6e1e52864b95dc6bf7312a8d7b5ee",
+      "candidateSha256": "fe8b9afe993fc47f80b8453dd49f9033d1c0269902a482617723513f41c30d99"
+    },
+    "eb906f97a298f44900ec6c0f763621f3e4a379bb204bf58e529a32c40c624c53": {
+      "objectFingerprint": "d10871d2c16a7109bc995699c07ddf195fd09c6358c8258a8619916922e3ec05",
+      "equivalent": true,
+      "allRootFrames": true,
+      "cloneParity": true,
+      "getMCParity": true,
+      "testedParents": [
+        "shell",
+        "main",
+        "currentDomain"
+      ],
+      "mainOnlyDefinitions": [
+        "EmotionMC"
+      ],
+      "inputSha256": "a13b9c327c1ed5748dd72f2d016417c580dc670949c43431d7090bbc43e10a07",
+      "candidateSha256": "36094fae6be337dde4e89d86384e52c0eddf190273158b019374cd29d15282ac"
+    },
+    "daa9f8aabfe69d8a200411fbdcd477fd9f0dda3cba976f2f028dd26d93e9c7b4": {
+      "objectFingerprint": "827cb386b2f3a19be6508ebe1a39048a55bfd8c795cd9da96cbad8db1bdb90c8",
+      "equivalent": true,
+      "allRootFrames": true,
+      "cloneParity": true,
+      "getMCParity": true,
+      "testedParents": [
+        "shell",
+        "main",
+        "currentDomain"
+      ],
+      "mainOnlyDefinitions": [
+        "EmotionMC"
+      ],
+      "inputSha256": "f35b79f4f268278fbd741c0b72124f58b65cec5497da89b8736c1989a5d3948a",
+      "candidateSha256": "eff3757a3a6ba4e73b4b4a2a38d8cc9e4a121c777e8ca8e70e865931c71552cc"
+    },
+    "8e3d5c5621433b598d8486547b08ce20e60f43049ed5d327048d229ff1982da0": {
+      "objectFingerprint": "9a70db975095ddd4fceac565a15840778a29174a0c1fda4699721de208e6f173",
+      "equivalent": true,
+      "allRootFrames": true,
+      "cloneParity": true,
+      "getMCParity": true,
+      "testedParents": [
+        "shell",
+        "main",
+        "currentDomain"
+      ],
+      "mainOnlyDefinitions": [
+        "EmotionMC"
+      ],
+      "inputSha256": "58abebd8081b6a65ddb242ff96aa1051abd2b8f3312f4a1264f7983c6bda0423",
+      "candidateSha256": "9c52584d75ec1b54c202bfb6d1e6d3d0e194672a0bef34f99fd5c097941e1aef"
+    },
+    "426b61bd320d19b91a4419cc2141aa5fe86815b787e80cb2e77ad45b21644b8f": {
+      "objectFingerprint": "bce7419a1c457b9bb3bf2c02bf55fc2b847bb6cd00caa12697c459313c6430e6",
+      "equivalent": true,
+      "allRootFrames": true,
+      "cloneParity": true,
+      "getMCParity": true,
+      "testedParents": [
+        "shell",
+        "main",
+        "currentDomain"
+      ],
+      "mainOnlyDefinitions": [
+        "EmotionMC"
+      ],
+      "inputSha256": "2f058aac8f7cf96859a9474f08eac5efabc6c9029ab326c103ed5fddb037500b",
+      "candidateSha256": "af1429e7fc919c4750fa23e4a0401d4a36c02bfd43f810a47def7d2a3b8171ba"
+    },
+    "5d95503142d4dc4aca16be50f90b78565615c4aa52bddcd95af9cecfffaa196d": {
+      "objectFingerprint": "ad63795ff9cb75dfc514b2b35e459a19c1afaaf70a806387c8854fad2a4e84ee",
+      "equivalent": true,
+      "allRootFrames": true,
+      "cloneParity": true,
+      "getMCParity": true,
+      "testedParents": [
+        "shell",
+        "main",
+        "currentDomain"
+      ],
+      "mainOnlyDefinitions": [
+        "EmotionMC"
+      ],
+      "inputSha256": "ce8461ce96ffb553e5ddc8855086a599d1cb0cf74291c97f4f80d272c74ccb93",
+      "candidateSha256": "d197ca06f4c4dcbba91f9a3ee86d500a44c152b28655b8f0801a24d84bc597b8"
+    },
+    "c15dd82c65eeceba1babe8979a5a46ba1ba0a0f4c7cd7ac838de7b36892043bd": {
+      "objectFingerprint": "2881ab72878c0b8b4b8d34ff084ca74d72b0fc243eb74b563a615bb61a6b9ae3",
+      "equivalent": true,
+      "allRootFrames": true,
+      "cloneParity": true,
+      "getMCParity": true,
+      "testedParents": [
+        "shell",
+        "main",
+        "currentDomain"
+      ],
+      "mainOnlyDefinitions": [
+        "EmotionMC"
+      ],
+      "inputSha256": "b0efd552418456cd2af7d87f2ed9ec9370ff176b7011765a05a3b7cec4514038",
+      "candidateSha256": "962f17bee5be94c7810b2328a91ca2a4b128160640f7073d5b2a643658222c29"
+    },
+    "cf8c1ec88aefbd72d2f7771245b0a45bf5d24b33631924d5e97e36df3dd18b4d": {
+      "objectFingerprint": "99e5b8848b663392b0243689dbf84197070f4707ba5275695a302ee585cb35bd",
+      "equivalent": true,
+      "allRootFrames": true,
+      "cloneParity": true,
+      "getMCParity": true,
+      "testedParents": [
+        "shell",
+        "main",
+        "currentDomain"
+      ],
+      "mainOnlyDefinitions": [
+        "EmotionMC"
+      ],
+      "inputSha256": "be4d445aedb759bbfdfc5cb1d3581747fc461106a5fd5b8c7591bec6dfe09019",
+      "candidateSha256": "e7bbdd25edf381b54812b4208cec6ed8ab686266f0186228942be66a784004e2"
+    },
+    "2a52d7e2baf8790a773fa4def0cb8c86419aaa43cee0430ce23e076d38c4ea74": {
+      "objectFingerprint": "45556f0cd4b71227bbfa16ea81afe3c453e7010b2032d780e86698e646232fc8",
+      "equivalent": true,
+      "allRootFrames": true,
+      "cloneParity": true,
+      "getMCParity": true,
+      "testedParents": [
+        "shell",
+        "main",
+        "currentDomain"
+      ],
+      "mainOnlyDefinitions": [
+        "EmotionMC"
+      ],
+      "inputSha256": "5fe0786ac3610cad7ddb3950f75d4a918c2d08309e19f8b962f4c93979a88355",
+      "candidateSha256": "5e37f3f7c1aee80f3ddcb8b1efc35713ed23a956063b2a25b36c1e47f4261682"
+    },
+    "ce06119c96b1a23931ef1981f2f56753135ca7c2c33e202bee32e4b24d70723f": {
+      "objectFingerprint": "508dc86f7999b3d41884fc14417149750de5e15e960537974185d3714a9bdce5",
+      "equivalent": true,
+      "allRootFrames": true,
+      "cloneParity": true,
+      "getMCParity": true,
+      "testedParents": [
+        "shell",
+        "main",
+        "currentDomain"
+      ],
+      "mainOnlyDefinitions": [
+        "EmotionMC"
+      ],
+      "inputSha256": "7481f3cc196519971613be44d55341b29c96b37755ab643b9ca5bab9894630e6",
+      "candidateSha256": "f6e7965b163e7f478664d953d02bca2649d56768847076f4b23721abe56db766"
+    },
+    "00d2d34fe5791ac31928e4fe26308d305b519262cea405cfa2ee292def4280d1": {
+      "objectFingerprint": "6e4ccd9e33fa0ef9ef02d2e737bb40389b43888081e11850b5224ee41328ac4d",
+      "equivalent": true,
+      "allRootFrames": true,
+      "cloneParity": true,
+      "getMCParity": true,
+      "testedParents": [
+        "shell",
+        "main",
+        "currentDomain"
+      ],
+      "mainOnlyDefinitions": [
+        "EmotionMC"
+      ],
+      "inputSha256": "0b73c7981a578b22907ae87ba242c750018a13aecabbdd6e9cdbe588b650181e",
+      "candidateSha256": "ab3f0ffc882a0255e345d59c32c1b7be1ae3669fcad805fde2b0000bf1c3f904"
+    },
+    "359eb10b80c3914f676845cdb9f59cb376d72f868346ed0821a5a29ad944fcd2": {
+      "objectFingerprint": "5cf1ab574607c87ecc7128e2b2d207555a26e088fa2f7810c5eabab8dc7a6b03",
+      "equivalent": true,
+      "allRootFrames": true,
+      "cloneParity": true,
+      "getMCParity": true,
+      "testedParents": [
+        "shell",
+        "main",
+        "currentDomain"
+      ],
+      "mainOnlyDefinitions": [
+        "EmotionMC"
+      ],
+      "inputSha256": "eef8e06c28f7a0028834b85173669f39d240fdf65fe85d9ccc1cc3b313ee7a5c",
+      "candidateSha256": "1647847f4dae62946908bf59ecc0965493ba252229abebf18c9aad02204f939a"
+    },
+    "5f13bf0f1dbe1c06581c6d6a043ceb58669616fbff8f7ec3cab9cd2cf90ab00c": {
+      "objectFingerprint": "405b811076026a5de00878227881898f5862cff046e58e84c2f332a8c36e3be0",
+      "equivalent": true,
+      "allRootFrames": true,
+      "cloneParity": true,
+      "getMCParity": true,
+      "testedParents": [
+        "shell",
+        "main",
+        "currentDomain"
+      ],
+      "mainOnlyDefinitions": [
+        "main_fla.A8_head_n1_931",
+        "main_fla.A8_head_nw1_928",
+        "main_fla.A8_head_s1_924",
+        "main_fla.A8_head_s_917",
+        "main_fla.A8_head_sw1_920"
+      ],
+      "inputSha256": "830ce0943b65ea0504fb2998bf9f88f9ac0b6eeb19872083e0b0eeeb6dd93e54",
+      "candidateSha256": "a074497494ca6e981d141a3460b5f3502387e15ffa0890a77a903c21ca4a2802"
+    },
+    "133bcdc041a620e5233954542e715792195004fed0bd40b26ca6435e68ada03d": {
+      "objectFingerprint": "19be72f3422fa23f309a99da216be1762d62a9eedacb436616319bd0318923bb",
+      "equivalent": true,
+      "allRootFrames": true,
+      "cloneParity": true,
+      "getMCParity": true,
+      "testedParents": [
+        "shell",
+        "main",
+        "currentDomain"
+      ],
+      "mainOnlyDefinitions": [
+        "main_fla.A8_head_n1_931",
+        "main_fla.A8_head_nw1_928",
+        "main_fla.A8_head_s1_924",
+        "main_fla.A8_head_s_917",
+        "main_fla.A8_head_sw1_920"
+      ],
+      "inputSha256": "8b9daa1a7afa339a4f7ebdf5baca2e3a708d09ec65a7b3d6609c298bbdb6a9fd",
+      "candidateSha256": "ae7571f8695c9b39a32aaf23b8e1e8bed980cedc27c18dbc520962c544b8e5ac"
+    },
+    "6e17c38a2b45a1d06d6d7f741467480752feddee712ebce59073192842e8782a": {
+      "objectFingerprint": "9492041b3b5f422878e9687a8c92d3e2055f7906148884fbeb645ef31cc10930",
+      "equivalent": true,
+      "allRootFrames": true,
+      "cloneParity": true,
+      "getMCParity": true,
+      "testedParents": [
+        "shell",
+        "main",
+        "currentDomain"
+      ],
+      "mainOnlyDefinitions": [
+        "main_fla.A8_head_n1_931",
+        "main_fla.A8_head_nw1_928",
+        "main_fla.A8_head_s1_924",
+        "main_fla.A8_head_s_917",
+        "main_fla.A8_head_sw1_920"
+      ],
+      "inputSha256": "6e343f3238bece9467583b2fe1313da5c367b4d1aed9fb0044d20ac83d5f3e7e",
+      "candidateSha256": "73ddc7cb9340095dbb1deaf451fd47b8a657031d7ec5469ec7080360bdcbbd59"
+    },
+    "39610c4f10f444cdbaf824f38fdf8ee7eefe4036fd451bef9c767e01930b52b1": {
+      "objectFingerprint": "4f51b4229912fb581550026a30a09a3e9c8a7c0ed339ef5c5fd1a8157939d398",
+      "equivalent": true,
+      "allRootFrames": true,
+      "cloneParity": true,
+      "getMCParity": true,
+      "testedParents": [
+        "shell",
+        "main",
+        "currentDomain"
+      ],
+      "mainOnlyDefinitions": [
+        "main_fla.A8_head_n1_931",
+        "main_fla.A8_head_nw1_928",
+        "main_fla.A8_head_s1_924",
+        "main_fla.A8_head_s_917",
+        "main_fla.A8_head_sw1_920"
+      ],
+      "inputSha256": "0126135e30a7aa8850b8cad309129039a4d4b1d242d626b6308abd677425b306",
+      "candidateSha256": "97d8614ed7729d3bdd88efd9bfaee7c98bd73929d0394852c73402728727133d"
+    },
+    "891aa4771185dcfa13ddda61ae0abb9c5c735b062b78aa9301e417dc09d86409": {
+      "objectFingerprint": "952ad58729ca824995b46f1d713aab2b98e12e07b027b65ea01c1b0d7746e6c5",
+      "equivalent": true,
+      "allRootFrames": true,
+      "cloneParity": true,
+      "getMCParity": true,
+      "testedParents": [
+        "shell",
+        "main",
+        "currentDomain"
+      ],
+      "mainOnlyDefinitions": [
+        "main_fla.A8_head_n1_931",
+        "main_fla.A8_head_nw1_928",
+        "main_fla.A8_head_s1_924",
+        "main_fla.A8_head_s_917",
+        "main_fla.A8_head_sw1_920"
+      ],
+      "inputSha256": "f19d68f468be5c9454ee69387e4eaa54f9c78ddbd6d205845a66be49b04f0844",
+      "candidateSha256": "22475fd71b59f2e1a084303a70776af04c6c99cfdd58f0ce8219227c2e526acd"
+    },
+    "bcdfa062d3001987cdc7a076d40e204d0cd8f52386b234a9d751b40ba0e9d28a": {
+      "objectFingerprint": "db94e0987c8a8866b21b5ec3027905b9b7ff0d1af9bd65fc2cf913151f5e4437",
+      "equivalent": true,
+      "allRootFrames": true,
+      "cloneParity": true,
+      "getMCParity": true,
+      "testedParents": [
+        "shell",
+        "main",
+        "currentDomain"
+      ],
+      "mainOnlyDefinitions": [
+        "main_fla.A8_head_n1_931",
+        "main_fla.A8_head_nw1_928",
+        "main_fla.A8_head_s1_924",
+        "main_fla.A8_head_s_917",
+        "main_fla.A8_head_sw1_920"
+      ],
+      "inputSha256": "16c8f85cf4248f9217dceeddf53909b76ae3ac5647a3d4d9de9180c0720907c1",
+      "candidateSha256": "ada7826da29b67f3829ab1997e01244c071cda46c91937617d2ff477144d09b8"
+    },
+    "6f53151eac781f96e76a95f070808256f7b75474f20bbaac16553e171a922fb0": {
+      "objectFingerprint": "e561f2bbbeec3687b71e42ec6c44c51c1a34f38d310a3094cdff4f39508bd709",
+      "equivalent": true,
+      "allRootFrames": true,
+      "cloneParity": true,
+      "getMCParity": true,
+      "testedParents": [
+        "shell",
+        "main",
+        "currentDomain"
+      ],
+      "mainOnlyDefinitions": [
+        "main_fla.A8_head_n1_931",
+        "main_fla.A8_head_nw1_928",
+        "main_fla.A8_head_s1_924",
+        "main_fla.A8_head_s_917",
+        "main_fla.A8_head_sw1_920"
+      ],
+      "inputSha256": "cabb0c633b74e7e11127f1f6690f8af8ccbc7539279d4b1af718091bdbfbbe02",
+      "candidateSha256": "07f033fb13287e937673816a39c2a409ef2ca189a61a854b3212dd7821aa9090"
+    },
+    "48ce7e7d21b1721757f39c6dbbb6696149e9ccd77ccdae86e544e24463212598": {
+      "objectFingerprint": "1ee07371a1353a2fe65f5d7ef3d9e0f69d253b1738ed14e743162381f08d5a0e",
+      "equivalent": true,
+      "allRootFrames": true,
+      "cloneParity": true,
+      "getMCParity": true,
+      "testedParents": [
+        "shell",
+        "main",
+        "currentDomain"
+      ],
+      "mainOnlyDefinitions": [
+        "main_fla.A8_head_n1_931",
+        "main_fla.A8_head_nw1_928",
+        "main_fla.A8_head_s1_924",
+        "main_fla.A8_head_s_917",
+        "main_fla.A8_head_sw1_920"
+      ],
+      "inputSha256": "6bb0ab59ecacc20e31d46ff3c6ba3d66d04d53ce621a3df1131ce075062492e6",
+      "candidateSha256": "dbd7268945a0f4abe2db5d8b30230a10264f463a1f4dbdd58cfc3db621103804"
+    },
+    "2d21eff80285bd79d4a068131278dc146e0fb1415eaf1aeecfd375381463b867": {
+      "objectFingerprint": "911954dc2f1f0c4400cfccd36228999eee88f01b76d31735bafc9ba9208965c8",
+      "equivalent": true,
+      "allRootFrames": true,
+      "cloneParity": true,
+      "getMCParity": true,
+      "testedParents": [
+        "shell",
+        "main",
+        "currentDomain"
+      ],
+      "mainOnlyDefinitions": [
+        "main_fla.A8_head_n1_931",
+        "main_fla.A8_head_nw1_928",
+        "main_fla.A8_head_s1_924",
+        "main_fla.A8_head_s_917",
+        "main_fla.A8_head_sw1_920"
+      ],
+      "inputSha256": "acd08d2864edb178c4d47fb1a749ae86ef9991aa76e925f2c1fc2856f7065ec0",
+      "candidateSha256": "9d2b3098f30151cecef04d3170634b6e3cf0adcb8c10863b76f925b1af899863"
+    },
+    "3d79f2dd660fed5031366adf3a3b757efd823337ee7f6a55f773d49234a81292": {
+      "objectFingerprint": "c550cf5dc47d78679ff023aaa9abf3759e34e66d3515be4d229ec82c64d68110",
+      "equivalent": true,
+      "allRootFrames": true,
+      "cloneParity": true,
+      "getMCParity": true,
+      "testedParents": [
+        "shell",
+        "main",
+        "currentDomain"
+      ],
+      "mainOnlyDefinitions": [
+        "EmotionMC"
+      ],
+      "inputSha256": "d739a7058570764fb548d66bdd461a585174d6f397031f6993fc65188cc4129f",
+      "candidateSha256": "5b5f39dad307c15434fa33f5c9828356704e696ce4d54e5358e8b0abf078eb16"
+    },
+    "95d0347b3201ea899262903c9943eca22b8c032074d2b4c8d44ecfccc3e3701a": {
+      "objectFingerprint": "5d8ee4851974dc157444a12282db97d7ff1fc2262c767113e2e2732c9782a5f3",
+      "equivalent": true,
+      "allRootFrames": true,
+      "cloneParity": true,
+      "getMCParity": true,
+      "testedParents": [
+        "shell",
+        "main",
+        "currentDomain"
+      ],
+      "mainOnlyDefinitions": [
+        "EmotionMC"
+      ],
+      "inputSha256": "34d0eb0e9eafbff944f9c5fa6d3c15c5d294c802a90c2340193c4fb2bd10a09f",
+      "candidateSha256": "deb1e4df4ead9daf5f39831b5b668fe481314595a08ad3da5736d102fd471e3d"
+    },
+    "4c63fbd0e90879b3073a39206e0859edcdfb88296ba45c508f4db432d90c98b4": {
+      "objectFingerprint": "59d71d791fdc50a7eb21905d0503c52c7ff074a80e6773a33553dc01e8fa7b08",
+      "equivalent": true,
+      "allRootFrames": true,
+      "cloneParity": true,
+      "getMCParity": true,
+      "testedParents": [
+        "shell",
+        "main",
+        "currentDomain"
+      ],
+      "mainOnlyDefinitions": [
+        "EmotionMC"
+      ],
+      "inputSha256": "53798079e99fac6259e89a2909d2f6991124b7e54cc047bae8cdbdba2f894661",
+      "candidateSha256": "8cd1677f8e9910396addd4b01ca4bcb6f7105fce04a98964cb7da3ce4aed06d7"
+    },
+    "60b02716fbcee3f8715ad3fb8c99b77bce02f1c79b611d88a3a2834c0cb4b63f": {
+      "objectFingerprint": "005bb7af28f97e338834ec963b532ee2d2453bf74b1d5156dd890503575ecf7c",
+      "equivalent": true,
+      "allRootFrames": true,
+      "cloneParity": true,
+      "getMCParity": true,
+      "testedParents": [
+        "shell",
+        "main",
+        "currentDomain"
+      ],
+      "mainOnlyDefinitions": [
+        "EmotionMC"
+      ],
+      "inputSha256": "d7555ed4f34e5c32a8d0a196fb6d52a05dc69548ccee1b94046b1c55c2e7a32d",
+      "candidateSha256": "079ff9ee7ef393bf7ff860055ec807eee6882847a0e282ee0ec8b3506cc2d8aa"
+    },
+    "d72d14bea8cf9e6c13cf8b16ed608e19005f05a275a11cadfc9f7835543567e3": {
+      "objectFingerprint": "875509c36a5fad76ad0f234964820c706f486926cd6e2e5aed54efd1360cf642",
+      "equivalent": true,
+      "allRootFrames": true,
+      "cloneParity": true,
+      "getMCParity": true,
+      "testedParents": [
+        "shell",
+        "main",
+        "currentDomain"
+      ],
+      "mainOnlyDefinitions": [
+        "EmotionMC"
+      ],
+      "inputSha256": "67927a2f6431c299b21232a8a9cb4be3b4f51060d08a4ee640ee581d20d96749",
+      "candidateSha256": "cc2ee31d2f926f37d5819bcb3dbbf28ab39f411f5bdb0d9317ce816ed9a0dcc6"
+    },
+    "7e1138acfac5683fdf23dcaa2f7d778dfd67b30dd45e7be1d90113a239baf067": {
+      "objectFingerprint": "818817036d6b49cd2a4f9efb1acd0bf200cca6bbde516142c965f17c99dbb74c",
+      "equivalent": true,
+      "allRootFrames": true,
+      "cloneParity": true,
+      "getMCParity": true,
+      "testedParents": [
+        "shell",
+        "main",
+        "currentDomain"
+      ],
+      "mainOnlyDefinitions": [
+        "EmotionMC"
+      ],
+      "inputSha256": "51bac76bc2a5df8d10bf2262ad60b85964663534219fa80d7a124a288c12f6a0",
+      "candidateSha256": "2c9129a5625650fdf5b782569be03c0fa7c45de51c2a5c33183ab14e5ef9677e"
+    },
+    "46cb4b9772b801433da88e6fb472b4684aa0436a8807809edd68f456e4e0f0be": {
+      "objectFingerprint": "fbb3d496d7d15bd07d0da7f7b5706fe83da49f83b2c0e6fbeea3dd9dc74d4674",
+      "equivalent": true,
+      "allRootFrames": true,
+      "cloneParity": true,
+      "getMCParity": true,
+      "testedParents": [
+        "shell",
+        "main",
+        "currentDomain"
+      ],
+      "mainOnlyDefinitions": [
+        "EmotionMC"
+      ],
+      "inputSha256": "38cc34a8831d3865352a2a5953a6d4e3f95270e4ea70c8ffb7222169d919d029",
+      "candidateSha256": "81d1a468e2c58a1f087ec86ea458fe33c8c01c74da93d03f8f04f500370b5216"
+    },
+    "1d068ff7e1b27147fdbff932351c8704965e47b735b16bdba4b50f33630996a0": {
+      "objectFingerprint": "24ad925beee2a66b0ddc140f1faa4d45ae0829441bff42a647faf7e808571d55",
+      "equivalent": true,
+      "allRootFrames": true,
+      "cloneParity": true,
+      "getMCParity": true,
+      "testedParents": [
+        "shell",
+        "main",
+        "currentDomain"
+      ],
+      "mainOnlyDefinitions": [
+        "EmotionMC"
+      ],
+      "inputSha256": "0cbb3c3e239ce1be5ad492ff966c321de969a0b44e456e6679ada1b6ba9c96ab",
+      "candidateSha256": "ac5d6260b7daad274c6f6b01ccdad39045375b92e60adc4d28ee08ae55f7eb83"
+    },
+    "cbc99f8aba15b1113699f44987d849e2054e4e6d92b031c7f21447e9c68cfcd1": {
+      "objectFingerprint": "841e6e9efa54128c8751b6e4c50339477bb4c3f100439da3411c8f3f620934b3",
+      "equivalent": true,
+      "allRootFrames": true,
+      "cloneParity": true,
+      "getMCParity": true,
+      "testedParents": [
+        "shell",
+        "main",
+        "currentDomain"
+      ],
+      "mainOnlyDefinitions": [
+        "EmotionMC"
+      ],
+      "inputSha256": "2e7f65c977cb29c779afb8d1e184ffa18e4f1e5d701c0d10b22c4221c5d80f30",
+      "candidateSha256": "040e2f5deab2ac37360f5948aace82e796dc415de9448b06e51f2d5f75e852db"
+    },
+    "81cd9243164899d04aff9469c99fb541bd50d64816f2291dd9ae915f47ee824e": {
+      "objectFingerprint": "49376e35ed4b118f9c469c1760d78fc619fc49eb9cfb0c43b56255901bf32519",
+      "equivalent": true,
+      "allRootFrames": true,
+      "cloneParity": true,
+      "getMCParity": true,
+      "testedParents": [
+        "shell",
+        "main",
+        "currentDomain"
+      ],
+      "mainOnlyDefinitions": [
+        "EmotionMC"
+      ],
+      "inputSha256": "3ad5096af6c6e03eb51de2c39d8ef2fcab4bc924ecb2acac9cfdbd993201bd39",
+      "candidateSha256": "b7fc06735134238eb3b448b14424027d1db74bc32c220feda0f2dc3ad34282dc"
+    },
+    "1790cf007d4b7c54dc2b22a614cc9ab93590ac90e335972959b0b2116c688432": {
+      "objectFingerprint": "93307e93b8e7cbe4f0c113152ae631dbfc15afade6cc6f648d867c35380fdc77",
+      "equivalent": true,
+      "allRootFrames": true,
+      "cloneParity": true,
+      "getMCParity": true,
+      "testedParents": [
+        "shell",
+        "main",
+        "currentDomain"
+      ],
+      "mainOnlyDefinitions": [
+        "EmotionMC"
+      ],
+      "inputSha256": "5c4896d9252338de03f1712999340181a1ad507420abcbd08452530aba64eb61",
+      "candidateSha256": "5d3b48ab0c3dafeff826ebe82a01969942680dfc30c27e3ba075e36b31d37487"
+    },
+    "49d4b1c9ea89f8127438e8101e39c557893287d399e005305fbc095a1af24eae": {
+      "objectFingerprint": "617faf6a2fc443757106fed0dc6498fd4ba7a5502f91c30c8627214f311c5125",
+      "equivalent": true,
+      "allRootFrames": true,
+      "cloneParity": true,
+      "getMCParity": true,
+      "testedParents": [
+        "shell",
+        "main",
+        "currentDomain"
+      ],
+      "mainOnlyDefinitions": [
+        "EmotionMC"
+      ],
+      "inputSha256": "4022f05a5f620b4bb1e1e4ef1bc65ad67c479172f87495c190ccd96ef3c82a30",
+      "candidateSha256": "8a229d21b139486a43bcb91a5fa3ec5061ce15adc6c5f6877d38a01bb51f1330"
+    },
+    "4541c19f59238979b18e88a1675ac13914de2f412487f617a884fa41eff1b23f": {
+      "objectFingerprint": "a2915426a748edacd8168b53164d1e624eee5482d51001f3a50c3b4637a40759",
+      "equivalent": true,
+      "allRootFrames": true,
+      "cloneParity": true,
+      "getMCParity": true,
+      "testedParents": [
+        "shell",
+        "main",
+        "currentDomain"
+      ],
+      "mainOnlyDefinitions": [
+        "EmotionMC"
+      ],
+      "inputSha256": "9d27ce9e5b9077566db0c43dfe2e731687f66c2ce05da932c1e293866d56fcd2",
+      "candidateSha256": "ccd6a699e865ce3cf4873c5e4f4912a0342b0d47aa65424ca83f2ad231c75c57"
+    },
+    "8814d19d86026d71b3b28e7e4da1b75fd2829f215f21c82b63bf4b42b419bedf": {
+      "objectFingerprint": "977fb1e15d3a50c978410f8ca1a4f9e4874960b395f39d5e7e0bf29ea721477a",
+      "equivalent": true,
+      "allRootFrames": true,
+      "cloneParity": true,
+      "getMCParity": true,
+      "testedParents": [
+        "shell",
+        "main",
+        "currentDomain"
+      ],
+      "mainOnlyDefinitions": [
+        "EmotionMC"
+      ],
+      "inputSha256": "73a720ba50e4358422305489c454dc91ec98211abf893395de68335f57171819",
+      "candidateSha256": "83b8a69cb9fb5b38053d5d78bf66c9e260fcadebab7790047339d8f2461a1053"
+    },
+    "abea6c06adc1bcc41274f2d7ccb3b561894ddff5a33c08f81e87e3f731ad7e75": {
+      "objectFingerprint": "beb65980e8321c4bf066f1fbaec0ea7e15811a4994a3caf571eafd7407874d18",
+      "equivalent": true,
+      "allRootFrames": true,
+      "cloneParity": true,
+      "getMCParity": true,
+      "testedParents": [
+        "shell",
+        "main",
+        "currentDomain"
+      ],
+      "mainOnlyDefinitions": [
+        "EmotionMC"
+      ],
+      "inputSha256": "91e7df7d01157b7742e7cbfa12a87c29316650461b5135e4d2344372509e7be3",
+      "candidateSha256": "eec2f040d196eba7a68861d2194e2dac90c89e988f0c57fc4e7b813901d67507"
+    },
+    "9781381e7eb5e4a0db071d89290943c1d5a40e683890b6dd7acf85b124275bbf": {
+      "objectFingerprint": "c728058a1ae03e35b893b017b750de66879bc3edae055e771d5dcb2b0bfe0e8d",
+      "equivalent": true,
+      "allRootFrames": true,
+      "cloneParity": true,
+      "getMCParity": true,
+      "testedParents": [
+        "shell",
+        "main",
+        "currentDomain"
+      ],
+      "mainOnlyDefinitions": [
+        "EmotionMC"
+      ],
+      "inputSha256": "d1213f0762e5abfea23fe3e6b335ff32828981828cbfe23b1abfd831df990573",
+      "candidateSha256": "2b21f3ac74b67a082af9a7c2c44d54ef163e5b6d5908840980c5202566eeb3cc"
+    },
+    "099d5cc5b3978571dc649375a0b905c854a86c74f9812b05494f07a3c91dd220": {
+      "objectFingerprint": "cda8e0c970f31dd1f70cc596924f4380de45c07c6c9356f69c65325c2664b492",
+      "equivalent": true,
+      "allRootFrames": true,
+      "cloneParity": true,
+      "getMCParity": true,
+      "testedParents": [
+        "shell",
+        "main",
+        "currentDomain"
+      ],
+      "mainOnlyDefinitions": [
+        "EmotionMC"
+      ],
+      "inputSha256": "0135667e4beda8bf2518818fadd29fad34cea27450587f3af984e18a584a9fdc",
+      "candidateSha256": "6c4d0c67e86c8875314ba3157f9e39918401fab74d004f2a455b917ec64ad16a"
+    },
+    "96952468c8a798b97643051370f2e21188a3950e37b5eb37af73b2125d376528": {
+      "objectFingerprint": "2d3de9b7b724314e527be758d79fcbbd40604d071e032ab30440d453e79f29d3",
+      "equivalent": true,
+      "allRootFrames": true,
+      "cloneParity": true,
+      "getMCParity": true,
+      "testedParents": [
+        "shell",
+        "main",
+        "currentDomain"
+      ],
+      "mainOnlyDefinitions": [
+        "EmotionMC"
+      ],
+      "inputSha256": "c468dab37fb9eaf84aeb16a879fb370200fdcd30fc0331f5136eaae6243f3eab",
+      "candidateSha256": "d84cc1ba2563dc869a640a5404df6c8f1543ce31d8109ac47b3e48b0f68b5ab5"
+    },
+    "83cf9bfbcfebaf56b1192ada32bb1294a5dfd579b76c235c310c84fc3aa97416": {
+      "objectFingerprint": "84e98a3013487cbf908a44a9601304c7a27861ba7f3b8aea1868a3465f23cc15",
+      "equivalent": true,
+      "allRootFrames": true,
+      "cloneParity": true,
+      "getMCParity": true,
+      "testedParents": [
+        "shell",
+        "main",
+        "currentDomain"
+      ],
+      "mainOnlyDefinitions": [
+        "EmotionMC"
+      ],
+      "inputSha256": "9c691ee515db5d8f35c519a7601ffdd8630ae72ffe50a4a30c9667e7089a0759",
+      "candidateSha256": "3895e644423dfad4725a2ff839390046fdd179f4aec1c80b53d28d52938ad8e7"
+    },
+    "c2fd44f36abaec408689df09c32c666606e0e9969a6ffa0b597d0d4814ca63eb": {
+      "objectFingerprint": "5fc1ebc65020c657c1775e2a153a2ca586fa3f0570886a0353b4fcece5042ecb",
+      "equivalent": true,
+      "allRootFrames": true,
+      "cloneParity": true,
+      "getMCParity": true,
+      "testedParents": [
+        "shell",
+        "main",
+        "currentDomain"
+      ],
+      "mainOnlyDefinitions": [
+        "EmotionMC"
+      ],
+      "inputSha256": "777adfc4e5c483b156c5c782cedcd29370d8be88a22853a2bb5a20fd8d9823b0",
+      "candidateSha256": "30b4a6b74819d43b4f95796c0899c01c968a78447a78c9c23c88356ef036d24f"
+    },
+    "643c710c401e90835eed78329be0d406f927a02ed9a0e3b46b870e741e519860": {
+      "objectFingerprint": "62b49dc25218b9011c063e34441a6d93bfc9a02c5ba010c8ad95d225c15604f6",
+      "equivalent": true,
+      "allRootFrames": true,
+      "cloneParity": true,
+      "getMCParity": true,
+      "testedParents": [
+        "shell",
+        "main",
+        "currentDomain"
+      ],
+      "mainOnlyDefinitions": [
+        "EmotionMC"
+      ],
+      "inputSha256": "1f2100e70da888448765403d1818b317203ec709c0f93320b09d2732330497e8",
+      "candidateSha256": "45e09c7234076da4d6dd4693798db30935bbe73744f117a4d6a48e19604d22fc"
+    }
+  },
+  "standaloneObjects": {
+    "94fc25a6e42cb2d56d77101e38995f3a69b7d0dcbf0104e942771c5711a60b39": {
+      "objectFingerprint": "2a896fef526f86ae6687a6e92adf4a1944755514072d5f5e531b00b90ed2c710",
+      "standaloneRoot": true,
+      "constructorAndTimelineParity": true,
+      "loaderParametersFixture": true,
+      "networkSuspended": true,
+      "childFrameNormalization": 2,
+      "inputSha256": "67d4cb322029c53f63ad061acd6ccefab7e285c138e7e398629e593f418a7ae6",
+      "candidateSha256": "e4fb92d65aa9871e64649ac3a4c44c7826eadfe65653bf749f2dc83c3ecd40ab"
+    },
+    "1d1047096c0e03e7c562d671aa612a85fefb04f474fe0ef16cd7587f66242552": {
+      "objectFingerprint": "0d8077bf790002bd83232851e83bb1b8dd648a6430f109ab0f2e1e0785301529",
+      "standaloneRoot": true,
+      "constructorAndTimelineParity": true,
+      "loaderParametersFixture": true,
+      "networkSuspended": true,
+      "childFrameNormalization": 2,
+      "inputSha256": "3f2b244a15607e8190511cd556c40cca2a1dba9b3e748a87da5dbf72a62d09cc",
+      "candidateSha256": "1199c0377a73e85ff27943fa3626cb9b11eefd02c56490953897fee3fce0c0fa"
+    },
+    "395708408848b9a675c6734c5ff57b4c3e3775c23f712339946bf75599e89b17": {
+      "objectFingerprint": "6c102eaf809455a2619372c6528de32e35734464da29c2630022c0f9562e93ae",
+      "standaloneRoot": true,
+      "constructorAndTimelineParity": true,
+      "loaderParametersFixture": true,
+      "networkSuspended": true,
+      "childFrameNormalization": 2,
+      "inputSha256": "27c7ad3ca310400c8fd8a683bb55340dae2f2cc7851d55589cbe0d94711fc9f7",
+      "candidateSha256": "8e7388152b8bd003f9a90e1c8116318a7cf2b4aaa731ef0bfecaea4ef2bcfaf2"
+    },
+    "46b9652e76f77c5ca06a26f6bfdf9fd828da85b862330b1507e4ad0d346dd4ec": {
+      "objectFingerprint": "534819b3c8c2c5912bd0d89fbe178ffd5df6affdca0ca0e6b377b82e9a7384cb",
+      "standaloneRoot": true,
+      "constructorAndTimelineParity": true,
+      "loaderParametersFixture": true,
+      "networkSuspended": true,
+      "childFrameNormalization": 2,
+      "inputSha256": "7a8d51b8296b6a80aefed2a3df1a18e1c346912e565ac0366a1ed59fdd7cab89",
+      "candidateSha256": "266fa2130be2719241be6789f9f2e0cfde2a986df11812cbaa1c3ba3d998c4dc"
+    },
+    "4dc7f40baad01bbb03c18e9280a8783e634bd932a93b6b856077d24a93db010b": {
+      "objectFingerprint": "e7b71060cd28c805f3a04cd028305d57f4c1b537814a08a6b2854c18fc8ea401",
+      "standaloneRoot": true,
+      "constructorAndTimelineParity": true,
+      "loaderParametersFixture": true,
+      "networkSuspended": true,
+      "childFrameNormalization": 2,
+      "inputSha256": "53281f2f1d4001566588a3abf7118f3fcf8ae7e3b3a3629d43d19c14390a2368",
+      "candidateSha256": "ece8b01249920b2bd7ff809d0eb9a804b555e4effd95dd79a112bd233c72b070"
+    },
+    "8f364216911e22b3b96243da3cf44e0675c90cfb1d1575336286fe8c43839dbd": {
+      "objectFingerprint": "51b9d536005e51ff5655ef24e96a2602dc074f7f2c8866faea27e4ae35f559d1",
+      "standaloneRoot": true,
+      "constructorAndTimelineParity": true,
+      "loaderParametersFixture": true,
+      "networkSuspended": true,
+      "childFrameNormalization": 2,
+      "inputSha256": "31de1642947abe8e2d9e4448394d549f5a69a7260d0316e27925613950c7f7ae",
+      "candidateSha256": "2c3c284fe5f7b6d8dd0de4ed3292d646b6ada69b610168c9a6e8941daaf60acf"
+    }
+  }
+}

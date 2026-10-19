@@ -1,0 +1,16 @@
+{
+  "sourceSha256": "b17450b4a41bb6be26255431eedf0ca30fd9d5e489c7e189e710b15f652da4f0",
+  "label": "מחיקת חשבון",
+  "fonts": [
+    "Spacer Bold",
+    "SpacerBlack"
+  ],
+  "fontBytesUnmodified": true,
+  "leafGeometryUnmodified": true,
+  "modifiedTextIds": [
+    865,
+    886
+  ],
+  "newSpriteId": 887,
+  "outputSha256": "2c551c3e5af2270900730cfb7773808fb443293ab99be44c7bced80b5c26e2dd"
+}

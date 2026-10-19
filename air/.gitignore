@@ -1,0 +1,8 @@
+build/
+dist/
+local/
+__pycache__/
+*.p12
+*.pfx
+*.log
+._*

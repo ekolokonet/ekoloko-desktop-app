@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<application xmlns="http://ns.adobe.com/air/application/51.3">
+  <id>org.ekoloko.nativeair</id>
+  <versionNumber>0.1.0</versionNumber>
+  <filename>EkolokoAIR</filename>
+  <name>Ekoloko AIR Preview</name>
+  <initialWindow>
+    <content>EkolokoAIR.swf</content>
+    <title>Ekoloko AIR Preview</title>
+    <visible>true</visible><width>1000</width><height>700</height>
+    <minSize>800 560</minSize>
+    <renderMode>direct</renderMode>
+    <requestedDisplayResolution>high</requestedDisplayResolution>
+  </initialWindow>
+  <supportedProfiles>extendedDesktop</supportedProfiles>
+  <architecture>64</architecture>
+</application>
