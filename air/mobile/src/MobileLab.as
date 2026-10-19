@@ -38,8 +38,11 @@ package {
         private var walked:Boolean=false,chatted:Boolean=false,looked:Boolean=false;
         private var cameraButton:Sprite;
         private var argv:Array;
+        private var renderQuality:MobileRenderQuality;
+        public function get renderingDiagnostics():Object { return renderQuality.snapshot(); }
 
         public function MobileLab() {
+            renderQuality=new MobileRenderQuality(stage);
             stage.scaleMode=StageScaleMode.NO_SCALE;stage.align=StageAlign.TOP_LEFT;
             Multitouch.inputMode=MultitouchInputMode.TOUCH_POINT;
             viewport.addChild(scene);addChild(viewport);addChild(hud);

@@ -91,7 +91,6 @@ def main():
     xml = xml.replace("MobileLab.swf", "EkolokoAIR.swf").replace("EkolokoMobileLab", "EkolokoPhoneReview")
     xml = xml.replace("Ekoloko Mobile Lab", "Ekoloko Phone Review").replace("Ekoloko — Mobile Input Lab", "Ekoloko — Connected Phone Review")
     xml = xml.replace("application/51.3", "application/51.4")
-    xml = xml.replace("<iPhone>", "<iPhone><requestedDisplayResolution>high</requestedDisplayResolution>")
     if args.portrait: xml = xml.replace("<aspectRatio>landscape</aspectRatio>", "<aspectRatio>portrait</aspectRatio>")
     (BUILD / "application.xml").write_text(xml)
     # Reuse the approved desktop artwork verbatim; only export required sizes.

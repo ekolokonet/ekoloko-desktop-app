@@ -15,7 +15,7 @@
     <requestedDisplayResolution>high</requestedDisplayResolution>
   </initialWindow>
   <supportedProfiles>mobileDevice</supportedProfiles>
-  <iPhone><InfoAdditions><![CDATA[
+  <iPhone><requestedDisplayResolution>high</requestedDisplayResolution><InfoAdditions><![CDATA[
     <key>UIDeviceFamily</key><array><string>1</string><string>2</string></array>
   ]]></InfoAdditions></iPhone>
 </application>

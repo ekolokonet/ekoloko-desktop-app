@@ -57,6 +57,7 @@ package {
         private var mobileBridge:ConnectedMobileUI;
         private var viewport:Sprite = new Sprite();
         private var stagePolicy:NativeStagePolicy;
+        private var renderQuality:MobileRenderQuality;
         private var status:NativeStatus;
         private var generation:uint = 0;
         private var requests:Array = [];
@@ -88,6 +89,7 @@ package {
         CONFIG::desktop { private const mobileRuntime:Boolean = false; }
 
         public function EkolokoAIR() {
+            renderQuality = new MobileRenderQuality(stage);
             // Establish the native window's visibility once, before loading
             // any legacy document. Movie swaps must not own this lifecycle.
             if(!mobileRuntime)stage.nativeWindow.visible = true;
@@ -115,7 +117,7 @@ package {
                 return {width:physicalWidth(), height:physicalHeight(),screenDPI:Capabilities.screenDPI,displayDensity:displayDensity(),
                     visible:mobileRuntime||stage.nativeWindow.visible, nativeState:mobileRuntime?"mobile":stage.nativeWindow.displayState,
                     displayState:stage.displayState, stageWidth:stage.stageWidth, stageHeight:stage.stageHeight,
-                    scaleMode:stage.scaleMode, align:stage.align,
+                    scaleMode:stage.scaleMode, align:stage.align, renderingQuality:renderQuality.snapshot(),
                     focused:mobileRuntime||NativeApplication.nativeApplication.activeWindow == stage.nativeWindow,
                     sourceRect:stage.fullScreenSourceRect == null ? null : {width:stage.fullScreenSourceRect.width,height:stage.fullScreenSourceRect.height},
                     gameAttached:game != null && game.parent == viewport,
