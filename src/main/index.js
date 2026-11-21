@@ -145,6 +145,14 @@ function saveSetting(key, value) {
 // Every renderer sandboxed (control bar, game, popups).
 app.enableSandbox();
 
+// No remote DevTools in a release: drop the Chromium debugging switches if
+// someone starts the installed app with them.
+if (app.isPackaged) {
+  for (const s of ["remote-debugging-port", "remote-debugging-pipe", "remote-debugging-address", "remote-allow-origins"]) {
+    if (app.commandLine.hasSwitch(s)) app.commandLine.removeSwitch(s);
+  }
+}
+
 // Keep timers alive while minimised: Chrome's "intensive" throttling (a hidden
 // page gets one timer wake-up per minute after 5 minutes) would stretch the
 // game's 10 s socket heartbeat to 60 s. The normal hidden-page throttling
@@ -920,7 +928,7 @@ function registerIpc() {
 
 app.whenReady().then(async () => {
   logger.init();
-  logger.info("app", `ekoloko ${app.getVersion()} starting: target=${GAME.target} url=${GAME.url} packaged=${app.isPackaged}`);
+  logger.info("app", `ekoloko ${app.getVersion()} starting: target=${GAME.target} url=${GAME.url} packaged=${app.isPackaged} userData=${app.getPath("userData")}`);
 
   process.on("uncaughtException", (err) => logger.error("uncaughtException", (err && err.stack) || String(err)));
   process.on("unhandledRejection", (reason) => logger.error("unhandledRejection", (reason && reason.stack) || String(reason)));
