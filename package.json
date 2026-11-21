@@ -1,6 +1,6 @@
 {
   "name": "ekoloko-rewritten",
-  "version": "1.1.1",
+  "version": "2.0.0",
   "author": "Arnon001 <arnon@arnon001.com>",
   "description": "Application for ekoloko",
   "private": true,
@@ -10,43 +10,27 @@
     "url": "https://github.com/ekolokonet/ekoloko-desktop-app.git"
   },
   "scripts": {
-    "postinstall": "node scripts/setupDevFlashMac.js",
-    "dev": "electron-webpack dev",
-    "compile": "electron-webpack",
-    "build": "npm run compile && electron-builder",
-    "dist": "npm run compile && electron-builder",
-    "dist:dir": "npm run dist -- --dir -c.compression=store -c.mac.identity=null",
-    "dist:linux": "npm run compile && electron-builder -l",
-    "mac": "npm run compile && electron-builder --mac zip --x64 -c.mac.identity=null",
-    "dist:mac": "npm run compile && electron-builder --mac zip --x64 -c.mac.identity=null",
-    "dist:mac:dmg": "npm run dist:mac && node scripts/createMacDmg.js",
-    "dist:mac:dir": "npm run compile && electron-builder --mac --x64 --dir -c.compression=store -c.mac.identity=null",
-    "dist:mac:universal": "npm run compile && electron-builder --mac --universal"
-  },
-  "electronWebpack": {
-    "main": {
-      "webpackConfig": "webpack.additions.js"
-    },
-    "renderer": {
-      "webpackConfig": "webpack.additions.js"
-    }
+    "start": "electron .",
+    "start:beta": "electron . --beta",
+    "check": "node scripts/check.js",
+    "dist": "electron-builder --win --publish never",
+    "dist:dir": "electron-builder --win --dir --publish never",
+    "dist:linux": "electron-builder --linux --publish never",
+    "dist:mac": "electron-builder --mac zip --x64 --arm64 --publish never -c.mac.identity=null",
+    "dist:mac:dmg": "npm run dist:mac && node scripts/createMacDmg.js"
   },
   "dependencies": {
-    "electron-updater": "4.3.9",
-    "source-map-support": "^0.5.16"
+    "electron-updater": "^6.8.11"
   },
   "devDependencies": {
-    "electron": "8.2.0",
-    "electron-builder": "^22.4.1",
-    "electron-webpack": "^2.8.2",
-    "webpack": "~4.42.1"
+    "electron": "45.4.1",
+    "electron-builder": "^26.18.0"
   },
   "build": {
     "appId": "org.ekoloko",
     "productName": "ekoloko",
     "compression": "maximum",
     "asar": true,
-    "afterPack": "./scripts/afterPack.js",
     "publish": [
       {
         "provider": "github",
@@ -54,17 +38,11 @@
         "repo": "ekoloko-desktop-app"
       }
     ],
-    "extraResources": [
-      "./assets/**"
-    ],
     "win": {
       "target": [
         "nsis"
       ],
-      "extraResources": [
-        "./plugins/x64/**",
-        "./plugins/x64-debug/**"
-      ]
+      "icon": "icon.ico"
     },
     "linux": {
       "executableName": "ekoloko",
@@ -72,17 +50,11 @@
         "AppImage"
       ],
       "category": "Game",
-      "icon": "build/icon.png",
-      "extraResources": [
-        "./plugins/linux/**"
-      ]
+      "icon": "build/icon.png"
     },
     "mac": {
       "target": [
         "zip"
-      ],
-      "extraResources": [
-        "./plugins/mac/**"
       ],
       "icon": "build/icon.icns",
       "identity": "${env.APPLE_IDENTITY}",
@@ -100,6 +72,24 @@
       "allowToChangeInstallationDirectory": true,
       "deleteAppDataOnUninstall": true,
       "runAfterFinish": true
+    },
+    "electronLanguages": [
+      "en-US",
+      "he"
+    ],
+    "files": [
+      "src/**/*",
+      "assets/**/*",
+      "package.json"
+    ],
+    "electronFuses": {
+      "runAsNode": false,
+      "enableCookieEncryption": false,
+      "enableNodeOptionsEnvironmentVariable": false,
+      "enableNodeCliInspectArguments": false,
+      "enableEmbeddedAsarIntegrityValidation": true,
+      "onlyLoadAppFromAsar": true
     }
-  }
+  },
+  "main": "src/main/index.js"
 }

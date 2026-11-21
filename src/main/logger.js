@@ -2,7 +2,7 @@
 //
 // Keeps the most recent log lines in memory and appends them to a rolling file
 // under userData/logs. The "שמירת לוגים" button reads this back (via
-// getExportText) together with the Flash player's flashlog.txt and hands the
+// getExportText) and hands the
 // user a single file to send us manually.
 //
 // Hard rule: logging must NEVER throw. Every fs operation is wrapped so a
@@ -19,14 +19,12 @@ const MAX_FILE_BYTES = 2 * 1024 * 1024; // 2 MB, then rotate to .1
 let buffer = [];
 let logDir = null;
 let logFile = null;
-let flashVersion = "unknown";
 
 function ts() {
   return new Date().toISOString();
 }
 
-function init(opts) {
-  if (opts && opts.flashVersion) flashVersion = opts.flashVersion;
+function init() {
   try {
     logDir = path.join(app.getPath("userData"), "logs");
     fs.mkdirSync(logDir, { recursive: true });
@@ -36,6 +34,8 @@ function init(opts) {
     logFile = null;
   }
   appendToFile("\n" + metadataHeader() + "\n");
+  // lines logged before init (e.g. the GPU preference, set before "ready")
+  if (buffer.length) appendToFile(buffer.join("\n") + "\n");
 }
 
 function appendToFile(text) {
@@ -86,7 +86,6 @@ function metadataHeader() {
     `electron        : ${process.versions.electron}`,
     `chrome          : ${process.versions.chrome}`,
     `node            : ${process.versions.node}`,
-    `flash (declared): ${flashVersion}`,
     `platform/arch   : ${process.platform} ${process.arch}`,
     `os release      : ${os.release()}`,
     `locale          : ${locale}`,

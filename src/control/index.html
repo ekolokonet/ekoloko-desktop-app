@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="he">
+  <head>
+    <meta charset="UTF-8" />
+    <!-- The control bar is a local page: nothing remote, no inline script. -->
+    <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self'; font-src 'self'; connect-src 'none'; form-action 'none'; base-uri 'none'" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>ekoloko</title>
+    <link rel="stylesheet" href="control.css" />
+  </head>
+  <body>
+    <div class="bar">
+      <img class="logo-img" src="../../assets/3.png" alt="ekoloko" />
+
+      <div class="panel">
+        <div class="panel-label">
+          <span>זום</span>
+          <button class="chip" id="zoomFitBtn" type="button" title="התאמת המשחק לגודל החלון">⤢ התאם</button>
+        </div>
+        <div class="slider-row">
+          <input id="zoom" type="range" min="0.5" max="3" step="0.05" value="1" />
+          <div class="val" id="zoomValue">100%</div>
+        </div>
+      </div>
+
+      <div class="spacer"></div>
+
+      <div class="panel">
+        <div class="panel-label" id="volumeLabel">🔊 עוצמת קול</div>
+        <div class="slider-row">
+          <input id="volume" type="range" min="0" max="1" step="0.01" value="1" />
+          <div class="val" id="volumeValue">100%</div>
+        </div>
+      </div>
+
+      <div class="spacer"></div>
+
+      <button class="btn" id="clearCache" type="button">🗑️ נקה מטמון</button>
+
+      <div class="spacer"></div>
+
+      <button class="btn" id="restartBtn" type="button">🔄 הפעל מחדש</button>
+
+      <div class="spacer"></div>
+
+      <button class="btn" id="saveLogsBtn" type="button">💾 שמירת לוגים</button>
+
+      <div class="spacer"></div>
+
+      <button class="btn" id="darkModeBtn" type="button">🌙 מצב לילה</button>
+
+      <div class="spacer" id="presenceSpacer" hidden></div>
+
+      <button class="btn" id="presenceBtn" type="button" hidden title="מה חברים רואים בדיסקורד: שם ומיקום במשחק, או אנונימי">🔒 דיסקורד: אנונימי</button>
+
+      <div class="spacer"></div>
+
+      <button class="btn btn-fullscreen" id="fullscreenBtn" type="button">⛶ מסך מלא</button>
+
+      <button class="btn-icon" id="openDiscord" type="button" title="דיסקורד"><img src="../../assets/d-1.png" alt="דיסקורד" /></button>
+    </div>
+    <script src="control.js"></script>
+  </body>
+</html>
