@@ -1,4 +1,100 @@
 ; ---------------------------------------------------------------------------
+; Windows 7 / 8 / 8.1 guard (2.x)
+;
+; 2.x runs on Electron 45, which needs Windows 10 or newer. 1.1.x installs
+; update themselves (electron-updater 4.3.9 downloads this installer and runs
+; it), so on older Windows this installer must stop before it changes
+; anything: 1.1.x stays installed and keeps working.
+;
+; preInit is the first hook in .onInit: before the one-installer check, the
+; install-mode setup, customInit (which deletes stale registry keys) and the
+; install section (which uninstalls the old version). Nothing is removed.
+;
+; How 1.1.1 runs us, and what happens:
+;   "Restart now" in its update dialog:  --updated --force-run (with UI)
+;       -> a message, then 1.1.1 is started again (it had quit for the update)
+;   update on quit (its default):        --updated /S
+;       -> silent, nothing started (the player was closing the game)
+;   a player starts the downloaded installer by hand: a message.
+; In every case the old app's update feed (resources\app-update.yml) is
+; pinned to the v1.1.1 release, whose latest.yml says 1.1.1, so its updater
+; finds "no update" from then on: no download of every new release, no
+; "update ready" dialog on every start. It is the only file touched.
+;
+; Detection: HKLM\...\Windows NT\CurrentVersion\CurrentMajorVersionNumber
+; exists from Windows 10 on (value 10, also on Windows 11); Windows 7 / 8 /
+; 8.1 have no such value. (Not GetVersion: that depends on the manifest.)
+;
+; Test hooks (never set in a release build):
+;   !define EK_TEST_OLD_WINDOWS   behave as on Windows 8.1
+;   !define EK_TEST_INSTDIR "C:\x" treat C:\x as the installed 1.1.x folder
+; ---------------------------------------------------------------------------
+
+!define /ifndef EK_PINNED_FEED "https://github.com/ekolokonet/ekoloko-desktop-app/releases/download/v1.1.1"
+
+!macro preInit
+!ifndef BUILD_UNINSTALLER   ; (the build runs a stub of this installer to write the uninstaller)
+  Push $R0
+  Push $R1
+  Push $R2
+
+  ClearErrors
+  ReadRegDWORD $R0 HKLM "SOFTWARE\Microsoft\Windows NT\CurrentVersion" "CurrentMajorVersionNumber"
+  ${If} ${Errors}
+    StrCpy $R0 0
+  ${EndIf}
+  !ifdef EK_TEST_OLD_WINDOWS
+    StrCpy $R0 6
+  !endif
+
+  ${If} $R0 < 10
+    ; Where the old app is (per-user install first, then an old per-machine one).
+    !ifdef EK_TEST_INSTDIR
+      StrCpy $R1 "${EK_TEST_INSTDIR}"
+    !else
+      ReadRegStr $R1 HKCU "${INSTALL_REGISTRY_KEY}" "InstallLocation"
+      ${If} $R1 == ""
+        ReadRegStr $R1 HKLM "${INSTALL_REGISTRY_KEY}" "InstallLocation"
+      ${EndIf}
+    !endif
+
+    ; Pin the old app's update feed (only if that really is an installed app).
+    ${If} $R1 != ""
+    ${AndIf} ${FileExists} "$R1\${APP_EXECUTABLE_FILENAME}"
+    ${AndIf} ${FileExists} "$R1\resources\app-update.yml"
+      ClearErrors
+      FileOpen $R2 "$R1\resources\app-update.yml" w
+      ${IfNot} ${Errors}
+        FileWrite $R2 "provider: generic$\r$\n"
+        FileWrite $R2 "url: ${EK_PINNED_FEED}$\r$\n"
+        FileWrite $R2 "updaterCacheDirName: ekoloko-rewritten-updater$\r$\n"
+        FileClose $R2
+      ${EndIf}
+    ${EndIf}
+
+    MessageBox MB_OK|MB_ICONINFORMATION "This version of ekoloko needs Windows 10 or newer.$\n$\nYour current ekoloko stays installed and keeps working." /SD IDOK
+
+    ; 1.1.1 quit for "Restart now": start it again.
+    ${GetParameters} $R2
+    ClearErrors
+    ${GetOptions} $R2 "--force-run" $R0
+    ${IfNot} ${Errors}
+    ${AndIf} $R1 != ""
+    ${AndIf} ${FileExists} "$R1\${APP_EXECUTABLE_FILENAME}"
+      Exec '"$R1\${APP_EXECUTABLE_FILENAME}"'
+    ${EndIf}
+
+    SetErrorLevel 2
+    Quit
+  ${EndIf}
+
+  Pop $R2
+  Pop $R1
+  Pop $R0
+!endif
+!macroend
+
+; ---------------------------------------------------------------------------
 ; ekoloko custom NSIS installer logic
 ;
 ; electron-builder automatically !includes build/installer.nsh (it is the

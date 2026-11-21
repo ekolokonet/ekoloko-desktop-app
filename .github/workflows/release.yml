@@ -1,14 +1,19 @@
 name: Release
 
-# Product-code pushes to main build only Windows and Linux installers and
-# publish them as a single GitHub Release. macOS is intentionally built and
-# uploaded manually from the mac-support branch because the automatic runner
-# produces an unreliable package.
+# Product-code pushes to main build Windows and Linux installers and publish
+# them as one GitHub Release named after package.json's "version" (2.x: the
+# version is set in package.json, no longer derived from the run number). A
+# push whose version already has a release builds but publishes nothing, so
+# bump "version" to ship.
+#
+# Every installed app (1.1.x included) picks a new release up by itself
+# through electron-updater within hours: merging to main IS shipping.
+#
+# macOS is intentionally built and uploaded manually (see docs/MAC_BUILD.md).
 on:
   push:
     branches: [main]
-    # Editing only this workflow must not consume the next release number or
-    # create an otherwise empty release.
+    # Editing only this workflow must not create an otherwise empty release.
     paths-ignore:
       - ".github/workflows/release.yml"
   workflow_dispatch:
@@ -31,7 +36,6 @@ jobs:
 
     runs-on: ${{ matrix.os }}
     env:
-      # The supported automatic targets are x64.
       npm_config_arch: x64
     defaults:
       run:
@@ -43,23 +47,16 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 18
+          node-version: 22
 
       - name: Install dependencies
-        run: npm install
+        run: npm ci
 
-      - name: Set release version (1.1.<run number - 29>)
-        run: npm version "1.1.$(( ${{ github.run_number }} - 29 ))" --no-git-tag-version --allow-same-version
-
-      - name: Compile
-        run: npm run compile
-        env:
-          NODE_OPTIONS: --openssl-legacy-provider
+      - name: Syntax check
+        run: npm run check
 
       - name: Package installers
         run: npx electron-builder ${{ matrix.flag }} --publish never
-        env:
-          NODE_OPTIONS: --openssl-legacy-provider
 
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
@@ -78,6 +75,8 @@ jobs:
     permissions:
       contents: write
     steps:
+      - uses: actions/checkout@v4
+
       - name: Download all build artifacts
         uses: actions/download-artifact@v4
         with:
@@ -88,10 +87,14 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          VERSION=$(( ${{ github.run_number }} - 29 ))
-          gh release create "v1.1.${VERSION}" artifacts/* \
+          VERSION=$(node -p "require('./package.json').version")
+          if gh release view "v${VERSION}" --repo "${{ github.repository }}" >/dev/null 2>&1; then
+            echo "v${VERSION} is already released; bump package.json version to publish."
+            exit 0
+          fi
+          gh release create "v${VERSION}" artifacts/* \
             --repo "${{ github.repository }}" \
             --target "${{ github.sha }}" \
-            --title "ekoloko v1.1.${VERSION}" \
+            --title "ekoloko v${VERSION}" \
             --notes "Automated release from commit ${{ github.sha }}." \
             --latest

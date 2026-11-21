@@ -1,106 +1,120 @@
-const { app, BrowserWindow, BrowserView, Menu, dialog, ipcMain, shell } = require("electron");
+"use strict";
+
+// ekoloko desktop app, 2.x: a current Electron around the Phaser game.
+//
+// 1.x was an Electron 8 (Chrome 80) shell built for the Flash game (PPAPI Flash
+// plugin). The game is HTML5 now (Phaser, cut over 2026-11-15), so this version
+// drops Flash and runs a current Chromium: the game's modern code paths, a
+// current GPU blocklist, current WebGL/ANGLE, security fixes.
+//
+// Layout (as 1.x): one window, the control bar is the window's own page
+// (src/control, local, sandboxed) and the game is a WebContentsView under it.
+
+const {
+  app,
+  BrowserWindow,
+  WebContentsView,
+  Menu,
+  dialog,
+  ipcMain,
+  shell,
+  screen,
+  session,
+} = require("electron");
 const { execFile } = require("child_process");
-const { autoUpdater } = require("electron-updater");
 const path = require("path");
 const fs = require("fs");
-const os = require("os");
 const logger = require("./logger");
 const appVolume = require("./appVolume");
 const discordPresence = require("./discordPresence");
 const roomNames = require("./roomNames");
+const gpuPreference = require("./gpuPreference");
+const cookieMigration = require("./cookieMigration");
 
-const LOGIN_URL = "https://play.ekoloko.org/ekoloko/login.html";
+// ---------------------------------------------------------------------------
+// Where the game is
+// ---------------------------------------------------------------------------
+
+const TARGETS = {
+  prod: "https://play.ekoloko.org/",
+  beta: "https://playtesting.ekoloko.org/",
+};
+
+function argValue(name) {
+  const prefix = `--${name}=`;
+  const hit = process.argv.find((a) => a.startsWith(prefix));
+  return hit ? hit.slice(prefix.length) : null;
+}
+
+const ALLOW_LOCAL = !app.isPackaged && process.env.EKOLOKO_ALLOW_LOCAL === "1";
+
+// Only ekoloko.org (and its subdomains) over https may load inside the app.
+// Everything else opens in the system browser.
+function isAllowedUrl(raw) {
+  let u;
+  try {
+    u = new URL(raw);
+  } catch (e) {
+    return false;
+  }
+  const host = u.hostname.toLowerCase();
+  // Development runs only (never a packaged build): a local game build for testing.
+  if (ALLOW_LOCAL && u.protocol === "http:" && (host === "127.0.0.1" || host === "localhost")) return true;
+  if (u.protocol !== "https:") return false;
+  return host === "ekoloko.org" || host.endsWith(".ekoloko.org");
+}
+
+// Production by default. For testing:
+//   ekoloko.exe --beta                (or EKOLOKO_TARGET=beta)
+//   ekoloko.exe --url=https://<x>.ekoloko.org/...   (or EKOLOKO_URL=...)
+// A non-ekoloko URL is ignored (falls back to production).
+function resolveGameUrl() {
+  const explicit = argValue("url") || process.env.EKOLOKO_URL;
+  if (explicit) {
+    if (isAllowedUrl(explicit)) return { url: explicit, target: "custom" };
+    console.warn(`ignoring --url ${explicit}: only https://*.ekoloko.org is allowed`);
+  }
+  const t = (argValue("target") || process.env.EKOLOKO_TARGET || "").toLowerCase();
+  if (process.argv.includes("--beta") || t === "beta") return { url: TARGETS.beta, target: "beta" };
+  return { url: TARGETS.prod, target: "prod" };
+}
+
+const GAME = resolveGameUrl();
 const DISCORD_URL = "https://discord.gg/5uBSQx4yWa";
 
-// Discord application id for Rich Presence, from the Discord Developer Portal
-// (https://discord.com/developers/applications -> New Application -> copy the
-// "Application ID"). Empty string keeps the whole presence feature disabled.
-// See docs/DISCORD_PRESENCE.md for setup + the art asset keys.
-const DISCORD_CLIENT_ID = "1529879266370523206";
-// Rich-presence button shown to OTHER Discord users viewing the profile (you
-// can never click your own presence buttons — test with a second account).
-// Max 2 buttons, label <= 32 chars. When the privacy switch allows details,
-// the player's username is appended as ?ref=<username> for referral credit.
-const PRESENCE_BUTTON_LABEL = "להורדת המשחק";
-const PRESENCE_BUTTON_DISCORD_LABEL = "הצטרפו לקהילה"
-const PRESENCE_BUTTON_URL = "https://ekoloko.org/";
-const CONTROL_BAR_HEIGHT = 100;
+// A test target gets its own profile, so beta cookies/storage never mix with
+// the production login. EKOLOKO_USER_DATA / --user-data=<dir> override it
+// (used by tests so a run never touches a real profile). Before "ready".
+(function chooseUserData() {
+  const override = argValue("user-data") || process.env.EKOLOKO_USER_DATA;
+  if (override) {
+    app.setPath("userData", path.resolve(override));
+  } else if (GAME.target !== "prod") {
+    app.setPath("userData", path.join(app.getPath("appData"), `${app.getName()}-${GAME.target}`));
+  }
+})();
 
-// Game sizing. login.html embeds the SWF at 100%x100% of a box it sizes itself
-// and exposes window.ekolokoGameZoom; the page auto-fits the game to the window
-// by default and takes a fixed scale factor when the slider is used. Driving
-// that bridge (rather than Chromium's page zoom) means Flash renders at the
-// final resolution instead of Chromium magnifying a 960x600 texture.
-//
-// The old page-zoom path is kept as a fallback for any page without the bridge
-// (error page, mid-navigation), where the embed is measured and these
-// dimensions are the last resort.
+// Discord Rich Presence (see docs/DISCORD_PRESENCE.md). Empty = disabled.
+const DISCORD_CLIENT_ID = "1529879266370523206";
+const PRESENCE_BUTTON_LABEL = "להורדת המשחק";
+const PRESENCE_BUTTON_DISCORD_LABEL = "הצטרפו לקהילה";
+const PRESENCE_BUTTON_URL = "https://ekoloko.org/";
+
+const CONTROL_BAR_HEIGHT = 100;
 const GAME_DEFAULT_WIDTH = 960;
 const GAME_DEFAULT_HEIGHT = 600;
 const ZOOM_MIN = 0.5;
-// Above the old slider's 2x ceiling: fitting a 600px-tall movie to a 1440p
-// screen needs ~2.1x, and the fit factor has to stay inside the slider range so
-// the thumb can always represent it.
 const ZOOM_MAX = 3;
+const GREEN = "#6aaa1e";
+const NIGHT = "#1c2d4a";
 
-// Must match the bundled plugins/ DLLs. We ship CleanFlash 34.0.0.301
-// (kill-switch-free) PPAPI players: the plain release build in plugins/x64
-// (used by normal launches) and the content-debugger build in plugins/x64-debug
-// (used only with --devtools; it writes trace()/error output to flashlog.txt
-// when mm.cfg enables it — see DEBUG_MODE and ensureFlashDebugConfig).
-const FLASH_VERSION =
-  process.platform === "darwin"
-    ? "32.0.0.371"
-    : process.platform === "linux"
-    ? "34.0.0.137"
-    : "34.0.0.301";
+// DevTools: only in development runs (npm start), never in a packaged release.
+const DEVTOOLS_ENABLED = !app.isPackaged;
 
+// ---------------------------------------------------------------------------
+// Settings (userData/settings.json; same file and keys as 1.x)
+// ---------------------------------------------------------------------------
 
-
-// DevTools is gated behind a launch flag so support can open live Chrome
-// DevTools during a call (`ekoloko.exe --devtools`) without exposing it to
-// normal users. Logging happens regardless of this flag.
-const DEBUG_MODE =
-  process.argv.includes("--devtools") || process.argv.includes("--debug");
-
-// DevTools itself (plus the F12 / Ctrl+Shift+I toggle) is also always
-// available in dev runs, without the flag's other side effects (debug Flash
-// player, mm.cfg, auto-open).
-const DEVTOOLS_ENABLED = DEBUG_MODE || !app.isPackaged;
-
-let win;
-let siteView;
-let pluginName;
-let osName;
-let isDarkMode = false;
-let darkModeCSSKey = null;
-
-// The control bar's CSS now sizes itself responsively (clamp()s keyed off
-// window width) so its buttons don't dwarf the game on smaller screens. The
-// renderer reports its real, laid-out height back over IPC (see the
-// "control-bar-height" handler below) and this tracks it; CONTROL_BAR_HEIGHT
-// stays as the initial/fallback value used before that first report arrives.
-let controlBarHeight = CONTROL_BAR_HEIGHT;
-
-// Zoom state: fit mode recomputes on every load/resize, manual mode keeps the
-// slider's factor. Both are persisted so the game comes back the way it was
-// left. Defaults are overwritten from settings.json before the window opens.
-let zoomFitEnabled = true;
-let manualZoom = 1;
-let zoomResizeTimer = null;
-let zoomSaveTimer = null;
-
-// Discord Rich Presence state. The privacy switch defaults to OFF so a fresh
-// install never broadcasts a kid's username/in-game location — with it off the
-// presence is just "playing ekoloko". The game page reports username/room via
-// the presence preload bridge (see getPresencePreloadJs).
-let presenceShowDetails = false;
-let presenceUsername = "";
-let presenceRoom = "";
-let presenceSessionStart = null;
-
-// Tiny persisted settings file (userData/settings.json). Only the presence
-// privacy switch lives here for now; unknown keys are preserved.
 function getSettingsPath() {
   return path.join(app.getPath("userData"), "settings.json");
 }
@@ -117,154 +131,126 @@ function saveSetting(key, value) {
   const settings = readSettings();
   settings[key] = value;
   try {
+    fs.mkdirSync(path.dirname(getSettingsPath()), { recursive: true });
     fs.writeFileSync(getSettingsPath(), JSON.stringify(settings, null, 2), "utf8");
   } catch (e) {
     logger.warn("settings", `could not save settings: ${(e && e.message) || e}`);
   }
 }
 
-switch (process.platform) {
-  case "win32":
-    pluginName = process.arch == "x64" ? "x64/pepflashplayer.dll" : "x32/pepflashplayer32.dll";
-    osName = "windows";
-    break;
-  case "darwin":
-    pluginName = "mac/PepperFlashPlayer.plugin";
-    osName = "mac";
-    break;
-  case "linux":
-    pluginName = "linux/libpepflashplayer.so";
-    osName = "linux";
-    break;
-  default:
-    pluginName = "linux/libpepflashplayer.so";
-    break;
-}
+// ---------------------------------------------------------------------------
+// Chromium switches (before "ready")
+// ---------------------------------------------------------------------------
 
-// Normal launches use the release Flash player; only --devtools/--debug loads
-// the content-debugger build from the parallel "-debug" folder
-// (e.g. "x64/pepflashplayer.dll" -> "x64-debug/pepflashplayer.dll").
-if (DEBUG_MODE) {
-  pluginName = pluginName.replace(/^(x\d+)\//, "$1-debug/");
-}
+// Every renderer sandboxed (control bar, game, popups).
+app.enableSandbox();
 
-// Resolve the bundled Flash plugin in both development and the packaged app.
-// Packaged: electron-builder copies plugins/ via extraResources to
-// <process.resourcesPath>/plugins (outside the asar). Dev: it lives at the
-// repo-root plugins/ folder, relative to the compiled main in dist/main.
-// (Mirrors getAssetPath() below.) The previous `__dirname + "/../plugins/"`
-// resolved to a non-existent path inside the asar, so Flash failed to load.
-function getPluginPath(rel) {
-  const candidates = [
-    path.join(process.resourcesPath || "", "plugins", rel),
-    path.join(__dirname, "..", "..", "plugins", rel),
-    path.join(__dirname, "..", "..", "..", "plugins", rel),
-    path.join(__dirname, "..", "plugins", rel),
-  ];
-  for (const p of candidates) {
-    if (fs.existsSync(p)) return p;
-  }
-  return candidates[0];
-}
-
-const flashPluginPath = path.resolve(getPluginPath(pluginName));
-app.commandLine.appendSwitch("ppapi-flash-path", flashPluginPath);
-
-app.commandLine.appendSwitch("ppapi-flash-version", FLASH_VERSION);
-
-// Flash (PPAPI) renders into a texture composited by Chromium's GPU process.
-// Electron 8 ships a 2020-era GPU blocklist; on newer Windows builds/drivers it
-// readily blacklists the GPU and falls back to software (SwiftShader)
-// compositing, which makes Flash playable but FPS-laggy — while standalone
-// Chrome on the same machine keeps hardware acceleration and runs smooth.
-// Force GPU acceleration on regardless of the stale blocklist. (Both spellings:
-// Chrome renamed "blacklist" -> "blocklist"; harmless to pass the unused one.)
-app.commandLine.appendSwitch("ignore-gpu-blocklist");
-app.commandLine.appendSwitch("ignore-gpu-blacklist");
-
-if (process.platform === "linux") {
-  // Disabling sandboxing on Linux prevents modern kernel/glibc sandbox
-  // restrictions from blocking libpepflashplayer.so PPAPI plugin
-  // initialization ("Couldn't load plugin" on Fedora/Mint and other recent
-  // distros running Electron 8's 2020-era sandbox).
-  app.commandLine.appendSwitch("no-sandbox");
-  app.commandLine.appendSwitch("disable-ppapi-sandbox");
-  app.commandLine.appendSwitch("disable-gpu-sandbox");
-  app.commandLine.appendSwitch("disable-seccomp-filter-sandbox");
-  // GPU rasterization in Chromium 80 causes visual artifacts and flickering on
-  // modern Linux Mesa/Wayland drivers.
-  app.commandLine.appendSwitch("disable-gpu-rasterization");
-} else {
-  app.commandLine.appendSwitch("enable-gpu-rasterization");
-}
-
-function getAssetPath(filename) {
-  const candidates = [
-    path.join(process.resourcesPath || "", "assets", filename),
-    path.join(__dirname, "..", "..", "assets", filename),
-    path.join(__dirname, "..", "..", "..", "assets", filename),
-  ];
-  for (const p of candidates) {
-    if (fs.existsSync(p)) return p;
-  }
-  return null;
-}
-
-function getAssetDataUrl(filename) {
-  const p = getAssetPath(filename);
-  if (!p) return "";
-  try {
-    return `data:image/png;base64,${fs.readFileSync(p).toString("base64")}`;
-  } catch (e) {
-    return "";
+// No remote DevTools in a release: drop the Chromium debugging switches if
+// someone starts the installed app with them.
+if (app.isPackaged) {
+  for (const s of ["remote-debugging-port", "remote-debugging-pipe", "remote-debugging-address", "remote-allow-origins"]) {
+    if (app.commandLine.hasSwitch(s)) app.commandLine.removeSwitch(s);
   }
 }
 
-function getAssetFontUrl(filename) {
-  const p = getAssetPath(filename);
-  if (!p) return "";
-  try {
-    return `data:font/truetype;base64,${fs.readFileSync(p).toString("base64")}`;
-  } catch (e) {
-    return "";
-  }
+// Keep timers alive while minimised: Chrome's "intensive" throttling (a hidden
+// page gets one timer wake-up per minute after 5 minutes) would stretch the
+// game's 10 s socket heartbeat to 60 s. The normal hidden-page throttling
+// (timers at most once per second, no animation frames) stays, so a minimised
+// game costs almost no CPU.
+app.commandLine.appendSwitch("disable-features", "IntensiveWakeUpThrottling");
+
+// No --ignore-gpu-blocklist: 1.x forced it because Electron 8's 2020 blocklist
+// was stale; this Chromium's list is current (the same as Chrome's), so the
+// app gets the same GPU decisions as Chrome on that machine. Support can still
+// pass Chromium switches on the command line (ekoloko.exe --ignore-gpu-blocklist).
+
+// Windows: run on the high-performance GPU on laptops with two (Intel + NVIDIA
+// / AMD), unless the player chose otherwise in Windows' graphics settings.
+// See gpuPreference.js; must run before the GPU process starts.
+if (process.platform === "win32") {
+  gpuPreference.apply(readSettings(), saveSetting, logger);
 }
 
-// Preload for the game BrowserView. The site is remote and untrusted, so it
-// only gets a single, narrow, validated bridge: window.electronPresence. The
-// game page (login.html defines window.ekolokoPresence, which the SWF calls
-// via ExternalInterface on login/room changes) pushes {username, room} here.
-// Like the control page, this is written to a temp file at startup because
-// electron-webpack bundles src/main into one file and a preload must be a
-// real file on disk.
-function getPresencePreloadJs() {
-  return `
-    const { contextBridge, ipcRenderer } = require("electron");
+// ---------------------------------------------------------------------------
+// Single instance: a second launch focuses the running game
+// ---------------------------------------------------------------------------
 
-    function cleanString(value, maxLength) {
-      if (typeof value !== "string") return "";
-      // strip control characters, collapse whitespace, cap length
-      return value.replace(/[\\u0000-\\u001f\\u007f]/g, "").replace(/\\s+/g, " ").trim().slice(0, maxLength);
-    }
+if (!app.requestSingleInstanceLock()) {
+  app.quit();
+  process.exit(0);
+}
+// The 1.x login cookies, read before Chromium opens (and empties) the old
+// cookie database; put back once the session exists (cookieMigration.js).
+const legacyCookies = cookieMigration.readLegacyCookies(app.getPath("userData"), logger);
 
-    contextBridge.exposeInMainWorld("electronPresence", {
-      update(data) {
-        if (!data || typeof data !== "object") return;
-        ipcRenderer.send("presence-update", {
-          username: cleanString(data.username, 64),
-          room: cleanString(data.room, 100),
-        });
-      },
-      clear() {
-        ipcRenderer.send("presence-clear");
-      },
-    });
-  `;
+app.on("second-instance", () => {
+  if (!win || win.isDestroyed()) return;
+  if (win.isMinimized()) win.restore();
+  win.show();
+  win.focus();
+});
+
+// ---------------------------------------------------------------------------
+// State
+// ---------------------------------------------------------------------------
+
+let win = null;
+let gameView = null;
+let controlBarHeight = CONTROL_BAR_HEIGHT;
+let isDarkMode = false;
+let darkModeCSSKey = null;
+
+let zoomFitEnabled = true;
+let manualZoom = 1;
+let zoomResizeTimer = null;
+let zoomSaveTimer = null;
+let windowStateTimer = null;
+
+let presenceShowDetails = false;
+let presenceUsername = "";
+let presenceRoom = "";
+let presenceSessionStart = null;
+
+function gameContents() {
+  return gameView && !gameView.webContents.isDestroyed() ? gameView.webContents : null;
 }
 
-// Discord activity text is Hebrew to match the game. "details" is the top
-// line, "state" the second. Discord caps both at 128 chars — the preload
-// already caps the inputs well below that.
+// ---------------------------------------------------------------------------
+// Window state (position, size, maximised, fullscreen)
+// ---------------------------------------------------------------------------
+
+function boundsVisible(b) {
+  if (!b || !(b.width > 200) || !(b.height > 150)) return false;
+  return screen.getAllDisplays().some((d) => {
+    const a = d.workArea;
+    const ix = Math.min(b.x + b.width, a.x + a.width) - Math.max(b.x, a.x);
+    const iy = Math.min(b.y + b.height, a.y + a.height) - Math.max(b.y, a.y);
+    return ix >= 200 && iy >= 100;
+  });
+}
+
+function saveWindowState() {
+  if (!win || win.isDestroyed()) return;
+  saveSetting("window", {
+    bounds: win.getNormalBounds(),
+    maximized: win.isMaximized(),
+    fullscreen: win.isFullScreen(),
+  });
+}
+
+function scheduleWindowStateSave() {
+  if (windowStateTimer) clearTimeout(windowStateTimer);
+  windowStateTimer = setTimeout(() => {
+    windowStateTimer = null;
+    saveWindowState();
+  }, 500);
+}
+
+// ---------------------------------------------------------------------------
+// Discord presence
+// ---------------------------------------------------------------------------
+
 function buildPresenceActivity() {
   const activity = {
     assets: { large_image: "cover", large_text: "ekoloko" },
@@ -273,9 +259,6 @@ function buildPresenceActivity() {
   if (presenceShowDetails && presenceUsername) {
     activity.details = `משחק בתור ${presenceUsername}`;
     if (presenceRoom) {
-      // The game reports the SFS room name (usually a numeric id); map it to the
-      // Hebrew display name where known. Unmapped rooms (house instances,
-      // minigames) show a generic "exploring the map" line instead of a raw id.
       const friendly = roomNames[presenceRoom];
       activity.state = friendly ? `נמצא ב${friendly}` : "מסייר במפה";
     }
@@ -283,18 +266,14 @@ function buildPresenceActivity() {
     activity.details = "משחק באקולוקו";
   }
   if (PRESENCE_BUTTON_URL) {
-    // Referral only when the privacy switch permits showing the username.
     const url =
       presenceShowDetails && presenceUsername
         ? `${PRESENCE_BUTTON_URL}?ref=${encodeURIComponent(presenceUsername)}`
         : PRESENCE_BUTTON_URL;
+    // (Discord hides the whole activity when a button names its own brand;
+    // see docs/DISCORD_PRESENCE.md.)
     activity.buttons = [
       { label: PRESENCE_BUTTON_LABEL, url },
-      // Discord silently hides the ENTIRE activity from other viewers (no RPC
-      // error) when a presence button mentions their brand name — including the
-      // Hebrew "דיסקורד" — or, reportedly, links straight to discord.gg. So:
-      // neutral label + same-domain redirect page (ekoloko-client serves
-      // /ekoloko/discord.html which forwards to the invite).
       { label: PRESENCE_BUTTON_DISCORD_LABEL, url: DISCORD_URL },
     ];
   }
@@ -307,447 +286,22 @@ function updatePresenceActivity() {
   discordPresence.setActivity(buildPresenceActivity());
 }
 
-function getControlPageHtml() {
-  const logoSrc = getAssetDataUrl("3.png");
-  const discordSrc = getAssetDataUrl("d-1.png");
-  const fontSrc = getAssetFontUrl("Gan CLM Bold.ttf");
-  return `
-    <!doctype html>
-    <html>
-      <head>
-        <meta charset="UTF-8" />
-        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-        <title>ekoloko</title>
-        <style>
-          ${fontSrc ? `@font-face { font-family: 'GanCLM'; src: url('${fontSrc}') format('truetype'); font-weight: bold; }` : ""}
-
-          * { box-sizing: border-box; margin: 0; padding: 0; }
-
-          /* The bar sizes itself off window width (clamp(min, vw-based, max))
-             so it shrinks to fit smaller monitors/windows instead of always
-             claiming its full design-size footprint. The max in each clamp()
-             matches the original fixed sizes; JS reads back the real laid-out
-             height (see the "control-bar-height" IPC message) since it no
-             longer equals the CONTROL_BAR_HEIGHT constant on smaller windows. */
-          body {
-            font-family: 'GanCLM', 'Arial Rounded MT Bold', Arial, sans-serif;
-            overflow: hidden;
-            height: clamp(64px, 5.2vw, ${CONTROL_BAR_HEIGHT}px);
-            background: linear-gradient(180deg, #8fd42e 0%, #6aaa1e 100%);
-            border-bottom: 4px solid #4e8810;
-            /* The round Discord icon's size/offset drive the fullscreen
-               button's reserved margin directly (see .btn-fullscreen), so the
-               gap between them stays constant instead of drifting at
-               in-between window widths where two independently clamp()'d
-               values wouldn't shrink in lockstep. */
-            --icon-size: clamp(48px, 3.75vw, 72px);
-            --icon-right: clamp(6px, 0.52vw, 10px);
-          }
-
-          .bar {
-            height: clamp(64px, 5.2vw, ${CONTROL_BAR_HEIGHT}px);
-            position: relative;
-            display: flex;
-            align-items: center;
-            padding: 0 clamp(14px, 1.46vw, 28px);
-            gap: clamp(10px, 1.04vw, 20px);
-          }
-
-          .logo-img {
-            flex-shrink: 0;
-            height: clamp(56px, 5vw, 96px);
-          }
-
-          .sep {
-            flex-shrink: 0;
-            width: 2px;
-            height: clamp(40px, 3.54vw, 68px);
-            background: rgba(255, 255, 255, 0.3);
-            border-radius: 2px;
-          }
-
-          .panel {
-            /* Panels give up width first (buttons are flex-shrink: 0) so the
-               bar still fits everything on 1366px-wide laptop screens. */
-            flex-shrink: 1;
-            background: #3a6fd8;
-            border-radius: 14px;
-            border: 3px solid #2a55c0;
-            padding: clamp(6px, 0.52vw, 10px) clamp(10px, 0.83vw, 16px) clamp(8px, 0.62vw, 12px);
-            display: flex;
-            flex-direction: column;
-            gap: clamp(4px, 0.31vw, 6px);
-            min-width: clamp(100px, 7.3vw, 140px);
-          }
-
-          .panel-label {
-            font-size: clamp(10px, 0.62vw, 12px);
-            color: #b8cdff;
-            letter-spacing: 0.08em;
-            text-transform: uppercase;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            gap: 8px;
-          }
-
-          /* Small toggle that lives inside a panel label (fit-to-screen). */
-          .chip {
-            flex-shrink: 0;
-            border: none;
-            border-radius: 8px;
-            padding: 1px clamp(6px, 0.42vw, 8px);
-            background: rgba(255, 255, 255, 0.18);
-            color: #dbe6ff;
-            font-family: inherit;
-            font-size: clamp(10px, 0.62vw, 12px);
-            line-height: clamp(15px, 0.94vw, 18px);
-            letter-spacing: 0;
-            cursor: pointer;
-            white-space: nowrap;
-            transition: background 0.1s, color 0.1s;
-          }
-
-          .chip:hover { background: rgba(255, 255, 255, 0.32); }
-
-          /* Lit while the game auto-fits the window; dragging the zoom slider
-             drops out of fit mode and unlights it. */
-          .chip.active {
-            background: linear-gradient(180deg, #ff9a2a 0%, #fb7d07 100%);
-            color: #fff;
-          }
-
-          .slider-row {
-            display: flex;
-            align-items: center;
-            gap: clamp(6px, 0.52vw, 10px);
-          }
-
-          input[type="range"] {
-            flex: 1;
-            /* Allow the track to compress below its ~129px intrinsic width,
-               otherwise a shrunk panel overflows instead of narrowing. */
-            min-width: 56px;
-            cursor: pointer;
-            -webkit-appearance: none;
-            appearance: none;
-            height: 6px;
-            border-radius: 4px;
-            outline: none;
-            background: linear-gradient(to right, #fb7d07 var(--fill, 100%), rgba(255,255,255,0.3) var(--fill, 100%));
-          }
-
-          input[type="range"]::-webkit-slider-thumb {
-            -webkit-appearance: none;
-            appearance: none;
-            width: clamp(14px, 0.94vw, 18px);
-            height: clamp(14px, 0.94vw, 18px);
-            border-radius: 50%;
-            background: #fff;
-            box-shadow: 0 1px 4px rgba(0,0,0,0.4);
-            cursor: pointer;
-            transition: transform 0.1s;
-          }
-
-          input[type="range"]::-webkit-slider-thumb:hover { transform: scale(1.2); }
-          input[type="range"]:active::-webkit-slider-thumb { transform: scale(1.3); }
-
-          .val {
-            font-size: clamp(11px, 0.73vw, 14px);
-            color: #fff;
-            min-width: 42px;
-            text-align: right;
-            font-variant-numeric: tabular-nums;
-          }
-
-          .btn {
-            flex-shrink: 0;
-            border: none;
-            border-radius: 14px;
-            padding: 0 clamp(14px, 1.35vw, 26px);
-            height: clamp(34px, 2.7vw, 52px);
-            background: linear-gradient(180deg, #ff9a2a 0%, #fb7d07 100%);
-            border-bottom: 4px solid #c05800;
-            color: #fff;
-            font-family: inherit;
-            font-size: clamp(12px, 0.9vw, 17px);
-            cursor: pointer;
-            text-shadow: 1px 1px 2px rgba(0,0,0,0.3);
-            transition: transform 0.1s, border-bottom-width 0.1s, filter 0.1s;
-            white-space: nowrap;
-          }
-
-          .btn:hover { filter: brightness(1.08); }
-          .btn:active { transform: translateY(3px); border-bottom-width: 1px; }
-
-          .spacer { width: clamp(6px, 0.52vw, 10px); flex-shrink: 0; }
-
-          /* Push the fullscreen button to the far right of the bar. The reserved
-             right margin clears the absolutely-positioned Discord icon, with a
-             fixed 14px gap between them at every window width. */
-          .btn-fullscreen { margin-left: auto; margin-right: ${discordSrc ? "calc(var(--icon-right) + var(--icon-size) + 14px)" : "0"}; }
-
-          .btn-icon {
-            position: absolute;
-            top: clamp(4px, 0.31vw, 6px);
-            right: var(--icon-right);
-            background: none;
-            border: none;
-            padding: 0;
-            cursor: pointer;
-            border-radius: 50%;
-            width: var(--icon-size);
-            height: var(--icon-size);
-            overflow: hidden;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            transition: transform 0.1s, filter 0.1s;
-          }
-
-          .btn-icon img { width: 100%; height: 100%; object-fit: cover; border-radius: 50%; }
-          .btn-icon:hover { transform: scale(1.06); filter: brightness(1.08); }
-          .btn-icon:active { transform: scale(0.95); }
-
-          body.dark {
-            background: linear-gradient(180deg, #1a2744 0%, #0d1728 100%);
-            border-bottom-color: #060e1c;
-          }
-          body.dark .panel {
-            background: #0f1e3a;
-            border-color: #071228;
-          }
-          body.dark .panel-label { color: #5a80c0; }
-          body.dark .chip { background: rgba(255, 255, 255, 0.1); color: #8fb0e8; }
-          body.dark .chip:hover { background: rgba(255, 255, 255, 0.2); }
-          body.dark .chip.active {
-            background: linear-gradient(180deg, #2a3d6a 0%, #1a2848 100%);
-            color: #fff;
-          }
-          body.dark .btn {
-            background: linear-gradient(180deg, #1e2d50 0%, #131d38 100%);
-            border-bottom-color: #060e1c;
-          }
-          body.dark .btn#darkModeBtn {
-            background: linear-gradient(180deg, #2a3d6a 0%, #1a2848 100%);
-            border-bottom-color: #060e1c;
-          }
-        </style>
-      </head>
-      <body>
-        <div class="bar">
-          ${logoSrc ? `<img class="logo-img" src="${logoSrc}" alt="ekoloko" />` : ""}
-
-          <div class="panel">
-            <div class="panel-label">
-              <span>זום</span>
-              <button class="chip" id="zoomFitBtn" type="button" title="התאמת המשחק לגודל החלון">⤢ התאם</button>
-            </div>
-            <div class="slider-row">
-              <input id="zoom" type="range" min="${ZOOM_MIN}" max="${ZOOM_MAX}" step="0.05" value="1" />
-              <div class="val" id="zoomValue">100%</div>
-            </div>
-          </div>
-
-          <div class="spacer"></div>
-
-          <div class="panel">
-            <div class="panel-label" id="volumeLabel">🔊 עוצמת קול</div>
-            <div class="slider-row">
-              <input id="volume" type="range" min="0" max="1" step="0.01" value="1" />
-              <div class="val" id="volumeValue">100%</div>
-            </div>
-          </div>
-
-          <div class="spacer"></div>
-
-          <button class="btn" id="clearCache" type="button">🗑️ נקה מטמון</button>
-
-          <div class="spacer"></div>
-
-          <button class="btn" id="restartBtn" type="button">🔄 הפעל מחדש</button>
-
-          <div class="spacer"></div>
-
-          <button class="btn" id="saveLogsBtn" type="button">💾 שמירת לוגים</button>
-
-          <div class="spacer"></div>
-
-          <button class="btn" id="darkModeBtn" type="button">🌙 מצב לילה</button>
-
-          ${DISCORD_CLIENT_ID
-            ? `<div class="spacer"></div>
-
-          <button class="btn" id="presenceBtn" type="button" title="מה חברים רואים בדיסקורד: שם ומיקום במשחק, או אנונימי">${presenceShowDetails ? "🎮 דיסקורד: שם ומיקום" : "🔒 דיסקורד: אנונימי"}</button>
-
-          <div class="spacer"></div>`
-            : ""}
-
-          <button class="btn btn-fullscreen" id="fullscreenBtn" type="button">⛶ מסך מלא</button>
-
-          ${discordSrc
-            ? `<button class="btn-icon" id="openDiscord" type="button" title="דיסקורד"><img src="${discordSrc}" alt="דיסקורד" /></button>`
-            : `<button class="btn" id="openDiscord" type="button">דיסקורד</button>`
-          }
-        </div>
-        <script>
-          const { ipcRenderer } = require("electron");
-
-          // The bar's height now flexes with window width (CSS clamp()s), so
-          // the main process can no longer assume the CONTROL_BAR_HEIGHT
-          // constant when sizing the game view under it. Report the real,
-          // laid-out height whenever it changes.
-          const barEl = document.querySelector(".bar");
-          function reportBarHeight() {
-            ipcRenderer.send("control-bar-height", Math.ceil(barEl.getBoundingClientRect().height));
-          }
-          if (window.ResizeObserver) {
-            new ResizeObserver(reportBarHeight).observe(barEl);
-          } else {
-            window.addEventListener("resize", reportBarHeight);
-          }
-          reportBarHeight();
-
-          const fullscreenBtn = document.getElementById("fullscreenBtn");
-          const zoom = document.getElementById("zoom");
-          const zoomValue = document.getElementById("zoomValue");
-          const zoomFitBtn = document.getElementById("zoomFitBtn");
-          const volume = document.getElementById("volume");
-          const volumeValue = document.getElementById("volumeValue");
-          const volumeLabel = document.getElementById("volumeLabel");
-          const clearCache = document.getElementById("clearCache");
-          const restartBtn = document.getElementById("restartBtn");
-          const saveLogsBtn = document.getElementById("saveLogsBtn");
-          const darkModeBtn = document.getElementById("darkModeBtn");
-          const openDiscord = document.getElementById("openDiscord");
-          let dark = false;
-
-          function formatPercent(value) {
-            return Math.round(Number(value) * 100) + "%";
-          }
-
-          function setSliderFill(input) {
-            const min = parseFloat(input.min) || 0;
-            const max = parseFloat(input.max) || 1;
-            const pct = ((parseFloat(input.value) - min) / (max - min)) * 100;
-            input.style.setProperty("--fill", pct + "%");
-          }
-
-          fullscreenBtn.addEventListener("click", () => {
-            ipcRenderer.send("toggle-fullscreen");
-          });
-
-          function updateZoomUI(value, fit) {
-            zoom.value = value;
-            zoomValue.textContent = formatPercent(value);
-            setSliderFill(zoom);
-            zoomFitBtn.classList.toggle("active", fit);
-          }
-
-          // Dragging the slider is an explicit manual zoom, so it leaves fit mode.
-          zoom.addEventListener("input", () => {
-            updateZoomUI(zoom.value, false);
-            ipcRenderer.send("zoom-change", Number(zoom.value));
-          });
-
-          zoomFitBtn.addEventListener("click", () => {
-            ipcRenderer.send("zoom-fit");
-          });
-
-          // The main process owns the zoom: it answers the initial request and
-          // pushes a new factor whenever fit mode recomputes (load, resize,
-          // fullscreen).
-          ipcRenderer.on("zoom-changed", (_event, state) => {
-            updateZoomUI(state.zoom, state.fit);
-          });
-
-          ipcRenderer.on("fullscreen-changed", (_event, isFull) => {
-            fullscreenBtn.textContent = isFull ? "🗗 יציאה ממסך מלא" : "⛶ מסך מלא";
-          });
-
-          function updateVolumeUI() {
-            const v = Number(volume.value);
-            volumeValue.textContent = formatPercent(volume.value);
-            setSliderFill(volume);
-            volumeLabel.textContent = (v === 0 ? "🔇" : v < 0.5 ? "🔉" : "🔊") + " עוצמת קול";
-          }
-
-          volume.addEventListener("input", () => {
-            updateVolumeUI();
-            ipcRenderer.send("volume-change", Number(volume.value));
-          });
-
-          clearCache.addEventListener("click", () => {
-            ipcRenderer.send("clear-cache");
-            clearCache.textContent = "✓ נוקה!";
-            setTimeout(() => { clearCache.textContent = "🗑️ נקה מטמון"; }, 2000);
-          });
-
-          darkModeBtn.addEventListener("click", () => {
-            dark = !dark;
-            document.body.classList.toggle("dark", dark);
-            darkModeBtn.textContent = dark ? "☀️ מצב יום" : "🌙 מצב לילה";
-            ipcRenderer.send("dark-mode-toggle", dark);
-          });
-
-          restartBtn.addEventListener("click", () => {
-            ipcRenderer.send("restart");
-          });
-
-          let savingLogs = false;
-          saveLogsBtn.addEventListener("click", () => {
-            if (savingLogs) return;
-            savingLogs = true;
-            saveLogsBtn.textContent = "⏳ שומר...";
-            ipcRenderer.send("save-logs");
-          });
-
-          ipcRenderer.on("save-logs-done", (_event, ok) => {
-            savingLogs = false;
-            saveLogsBtn.textContent = ok ? "✓ נשמר!" : "✗ שגיאה";
-            setTimeout(() => { saveLogsBtn.textContent = "💾 שמירת לוגים"; }, 2500);
-          });
-
-          openDiscord.addEventListener("click", () => {
-            ipcRenderer.send("open-discord");
-          });
-
-          const presenceBtn = document.getElementById("presenceBtn");
-          if (presenceBtn) {
-            let presenceDetails = ${presenceShowDetails ? "true" : "false"};
-            presenceBtn.addEventListener("click", () => {
-              presenceDetails = !presenceDetails;
-              presenceBtn.textContent = presenceDetails ? "🎮 דיסקורד: שם ומיקום" : "🔒 דיסקורד: אנונימי";
-              ipcRenderer.send("presence-details-toggle", presenceDetails);
-            });
-          }
-
-          updateVolumeUI();
-          updateZoomUI(${manualZoom}, ${zoomFitEnabled ? "true" : "false"});
-          ipcRenderer.send("zoom-request");
-        </script>
-      </body>
-    </html>
-  `;
-}
+// ---------------------------------------------------------------------------
+// Layout and zoom (as 1.x: the game page is scaled with Chromium page zoom;
+// the ekolokoGameZoom bridge is used if a page provides one)
+// ---------------------------------------------------------------------------
 
 function setViewBounds() {
-  if (!win || !siteView) {
-    return;
-  }
-
-  const bounds = win.getContentBounds();
-  siteView.setBounds({
+  if (!win || win.isDestroyed() || !gameView) return;
+  const [width, height] = win.getContentSize();
+  gameView.setBounds({
     x: 0,
     y: controlBarHeight,
-    width: bounds.width,
-    height: Math.max(0, bounds.height - controlBarHeight),
+    width,
+    height: Math.max(0, height - controlBarHeight),
   });
-
-  siteView.setAutoResize({ width: true, height: true });
 }
 
-// Snap to the slider's 0.05 step so the thumb never lands between notches.
 function roundZoom(zoomFactor) {
   const value = Number(zoomFactor);
   if (!isFinite(value) || value <= 0) return 1;
@@ -758,15 +312,12 @@ function clampZoom(zoomFactor) {
   return Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, roundZoom(zoomFactor)));
 }
 
-// Measures the Flash embed in CSS pixels. CSS pixels are zoom-independent, so
-// the result is stable no matter what the current zoom factor is. `top` is how
-// far down the page the embed starts (the page centres it in a table), which
-// has to be scaled along with the movie or fitting pushes it out of view.
 async function measureGameSize() {
   const fallback = { width: GAME_DEFAULT_WIDTH, height: GAME_DEFAULT_HEIGHT, top: 0 };
-  if (!siteView) return fallback;
+  const wc = gameContents();
+  if (!wc) return fallback;
   try {
-    const size = await siteView.webContents.executeJavaScript(`(function () {
+    const size = await wc.executeJavaScript(`(function () {
       var el = document.getElementById("shell") || document.querySelector("object, embed");
       if (!el) return null;
       var width = el.offsetWidth || parseInt(el.getAttribute("width"), 10) || 0;
@@ -777,43 +328,37 @@ async function measureGameSize() {
     })();`);
     if (size && size.width > 0 && size.height > 0) return size;
   } catch (e) {
-    // navigating / no page yet — fall back to the known embed size
+    // navigating / no page yet
   }
   return fallback;
 }
 
 async function computeFitZoom() {
-  if (!win || win.isDestroyed() || !siteView) return clampZoom(manualZoom);
+  if (!win || win.isDestroyed()) return clampZoom(manualZoom);
   const size = await measureGameSize();
-  const bounds = win.getContentBounds();
-  // Reserve the page's 20px side padding plus room for a scrollbar, and a few
-  // pixels vertically, so fitting never creates the scrollbar that would then
-  // steal the width the fit was calculated against.
-  const availableWidth = Math.max(1, bounds.width - 56);
-  const availableHeight = Math.max(1, bounds.height - controlBarHeight - 12);
-  return clampZoom(
-    Math.min(availableWidth / size.width, availableHeight / (size.height + size.top))
-  );
+  const [width, height] = win.getContentSize();
+  const availableWidth = Math.max(1, width - 56);
+  const availableHeight = Math.max(1, height - controlBarHeight - 12);
+  return clampZoom(Math.min(availableWidth / size.width, availableHeight / (size.height + size.top)));
+}
+
+function sendToControl(channel, value) {
+  if (win && !win.isDestroyed() && !win.webContents.isDestroyed()) win.webContents.send(channel, value);
 }
 
 function sendZoomState(zoomFactor) {
-  if (!win || win.isDestroyed()) return;
-  win.webContents.send("zoom-changed", { zoom: zoomFactor, fit: zoomFitEnabled });
+  sendToControl("zoom-changed", { zoom: zoomFactor, fit: zoomFitEnabled });
 }
 
-// Hand the requested sizing to the game page's own layout (window.ekolokoGameZoom
-// from login.html) and read back the scale it settled on — in fit mode the page
-// is the one that knows how much room is left once its footer strip is measured.
-// Returns null when the page has no bridge, which is the caller's cue to fall
-// back to Chromium page zoom.
 async function applyPageScale(fit, scale) {
-  if (!siteView || siteView.webContents.isDestroyed()) return null;
+  const wc = gameContents();
+  if (!wc) return null;
   const js = `(function () {
     if (!window.ekolokoGameZoom) return null;
     return window.ekolokoGameZoom.apply(${fit ? "true" : "false"}, ${Number(scale) || 0});
   })();`;
   try {
-    const state = await siteView.webContents.executeJavaScript(js);
+    const state = await wc.executeJavaScript(js);
     if (state && Number(state.scale) > 0) return Number(state.scale);
   } catch (e) {
     // navigating / no page yet
@@ -821,34 +366,21 @@ async function applyPageScale(fit, scale) {
   return null;
 }
 
-// Single entry point for every zoom change: tells the page what to do, then
-// syncs the control bar with the scale that actually took effect.
 async function refreshZoom() {
-  if (!siteView) return;
-
+  if (!gameContents()) return;
   const applied = await applyPageScale(zoomFitEnabled, manualZoom);
   if (applied !== null) {
-    // The page sizes the movie itself, so Chromium zoom must stay neutral —
-    // otherwise the two multiply and the fit overshoots the window.
-    if (siteView && !siteView.webContents.isDestroyed()) {
-      siteView.webContents.setZoomFactor(1);
-    }
-    // Not clamped: a fit on a very large screen may legitimately exceed the
-    // slider's ceiling, and the readout should say what the game is really at.
+    const wc = gameContents();
+    if (wc) wc.setZoomFactor(1);
     sendZoomState(roundZoom(applied));
     return;
   }
-
-  // Fallback for a page without the bridge: scale it with Chromium page zoom.
   const zoomFactor = zoomFitEnabled ? await computeFitZoom() : clampZoom(manualZoom);
-  if (siteView && !siteView.webContents.isDestroyed()) {
-    siteView.webContents.setZoomFactor(zoomFactor);
-  }
+  const wc = gameContents();
+  if (wc) wc.setZoomFactor(zoomFactor);
   sendZoomState(zoomFactor);
 }
 
-// Dragging the slider fires an event per 0.05 step, so the preference is
-// written once the drag settles rather than on every notch.
 function saveZoomPreference() {
   if (zoomSaveTimer) clearTimeout(zoomSaveTimer);
   zoomSaveTimer = setTimeout(() => {
@@ -858,7 +390,6 @@ function saveZoomPreference() {
   }, 400);
 }
 
-// Window resizes arrive in a burst while dragging; recompute once it settles.
 function scheduleZoomRefresh() {
   if (!zoomFitEnabled) return;
   if (zoomResizeTimer) clearTimeout(zoomResizeTimer);
@@ -868,228 +399,91 @@ function scheduleZoomRefresh() {
   }, 150);
 }
 
-// login.html's actual visuals (jungle scene, logo, nav bar, play/register
-// buttons) are pixels drawn by the Flash movie in #mainSWFDIV — compiled .swf
-// assets served by the game backend, entirely outside CSS's reach. What's
-// left in the DOM (and the only thing this can style) is the green
-// letterboxing chrome around the movie: html/body, .page-container,
-// .game-viewport, #mainSWFDIV's own backgrounds (visible whenever the movie
-// doesn't exactly fill the viewport, e.g. mid-resize or at some zoom levels)
-// plus the footer strip below it.
+// Night mode: only the page's own background around the game changes.
 async function applyDarkModeCSS(isDark) {
-  if (!siteView) return;
+  const wc = gameContents();
+  if (!wc) return;
   if (darkModeCSSKey) {
-    await siteView.webContents.removeInsertedCSS(darkModeCSSKey);
+    try {
+      await wc.removeInsertedCSS(darkModeCSSKey);
+    } catch (e) {
+      /* page changed */
+    }
     darkModeCSSKey = null;
   }
   if (isDark) {
-    darkModeCSSKey = await siteView.webContents.insertCSS(`
-      html, body {
-        background-color: #1c2d4a !important;
-        background-image: none !important;
-      }
-      .page-container, .game-viewport, #mainSWFDIV, .game-footer {
-        background-color: #1c2d4a !important;
-      }
+    darkModeCSSKey = await wc.insertCSS(`
+      html, body { background-color: ${NIGHT} !important; background-image: none !important; }
+      .page-container, .game-viewport, #mainSWFDIV, .game-footer { background-color: ${NIGHT} !important; }
     `);
   }
 }
 
-// Chromium only exposes a boolean mute per webContents and the game's sound
-// comes from the Flash plugin (no HTML5 media to script a volume onto), so
-// the in-between range is applied at the OS mixer level by appVolume. The
-// hard mute here guarantees 0% is silent on every platform, including macOS
-// where no per-app OS volume API exists.
+// Chromium has only a boolean mute per webContents; the in-between levels are
+// set on the OS mixer by appVolume (Windows WASAPI session / PulseAudio).
 function applyVolume(volume) {
-  if (siteView) siteView.webContents.setAudioMuted(volume <= 0);
+  const wc = gameContents();
+  if (wc) wc.setAudioMuted(volume <= 0);
   appVolume.set(volume);
 }
 
-function openDiscordLink() {
-  shell.openExternal(DISCORD_URL);
-}
-
-// ---- TEMP dev-only debug overlay -------------------------------------------
-// Draws a small live log box over the game view so presence flow can be watched
-// without DevTools: game console lines, presence IPC arrivals, Discord RPC
-// state, and each SET_ACTIVITY actually sent. Active only when DevTools are
-// enabled (dev runs / --devtools); packaged release builds never show it.
-// Remove once the Discord presence feature is verified.
-function getDebugOverlayJs() {
-  return `
-    (function () {
-      if (window.__ekoDebugLog) return;
-      var box = document.createElement("div");
-      box.style.cssText = "position:fixed;top:8px;left:8px;z-index:2147483647;" +
-        "background:rgba(0,0,0,0.78);color:#8f8;font:11px/1.5 Menlo,Consolas,monospace;" +
-        "padding:6px 10px;border-radius:6px;max-width:62vw;pointer-events:none;" +
-        "white-space:pre-wrap;word-break:break-all;direction:ltr;text-align:left";
-      (document.body || document.documentElement).appendChild(box);
-      var lines = [];
-      window.__ekoDebugLog = function (line) {
-        lines.push(new Date().toISOString().slice(11, 19) + " " + line);
-        if (lines.length > 14) lines.shift();
-        box.textContent = lines.join("\\n");
-      };
-      window.__ekoDebugLog("debug overlay ready");
-    })();
-  `;
-}
-
-function pushDebug(line) {
-  if (!DEVTOOLS_ENABLED || !siteView) return;
+function openExternal(url) {
   try {
-    siteView.webContents
-      .executeJavaScript(`window.__ekoDebugLog && window.__ekoDebugLog(${JSON.stringify(String(line))})`)
-      .catch(() => {});
-  } catch (e) {
-    /* ignore */
-  }
-}
-
-// Logger passthrough that also mirrors lines onto the overlay; handed to
-// discordPresence so its connect/SET_ACTIVITY lines show up on screen.
-const overlayLogger = {
-  info(tag, msg) {
-    logger.info(tag, msg);
-    pushDebug(`[${tag}] ${msg}`);
-  },
-  warn(tag, msg) {
-    logger.warn(tag, msg);
-    pushDebug(`[${tag}] WARN ${msg}`);
-  },
-  error(tag, msg) {
-    logger.error(tag, msg);
-    pushDebug(`[${tag}] ERROR ${msg}`);
-  },
-};
-// ---- end TEMP debug overlay ------------------------------------------------
-
-// Path the debug Flash player writes trace()/ActionScript error output to.
-function getFlashLogPath() {
-  switch (process.platform) {
-    case "win32":
-      return path.join(app.getPath("appData"), "Macromedia", "Flash Player", "Logs", "flashlog.txt");
-    case "darwin":
-      return path.join(os.homedir(), "Library", "Preferences", "Macromedia", "Flash Player", "Logs", "flashlog.txt");
-    default:
-      return path.join(os.homedir(), ".macromedia", "Flash_Player", "Logs", "flashlog.txt");
-  }
-}
-
-// Flash Player reads mm.cfg from the user's home directory at startup. These
-// flags make the *debug* player write trace()/error output to flashlog.txt.
-// SuppressDebuggerExceptionDialogs stops the debug player from popping
-// ActionScript-error dialogs at end users while still logging them.
-function ensureFlashDebugConfig() {
-  const mmCfgPath = path.join(os.homedir(), "mm.cfg");
-  const contents = [
-    "ErrorReportingEnable=1",
-    "TraceOutputFileEnable=1",
-    "MaxWarnings=0",
-    "SuppressDebuggerExceptionDialogs=1",
-    "",
-  ].join("\r\n");
-  try {
-    fs.writeFileSync(mmCfgPath, contents, "utf8");
-    logger.info("flash", `wrote mm.cfg at ${mmCfgPath}`);
-  } catch (e) {
-    logger.warn("flash", `could not write mm.cfg: ${(e && e.message) || e}`);
-  }
-
-  // The sandboxed PPAPI Flash process can write to an existing flashlog.txt but
-  // usually cannot CREATE the Logs directory tree itself. Pre-create the dir and
-  // an empty, world-writable flashlog.txt so the debug player's trace()/error
-  // output actually lands on disk.
-  try {
-    const flashLogPath = getFlashLogPath();
-    fs.mkdirSync(path.dirname(flashLogPath), { recursive: true });
-    if (!fs.existsSync(flashLogPath)) fs.writeFileSync(flashLogPath, "");
-    logger.info("flash", `flashlog ready at ${flashLogPath}`);
-  } catch (e) {
-    logger.warn("flash", `could not prepare flashlog dir: ${(e && e.message) || e}`);
-  }
-}
-
-// Assemble one shareable .txt (app log + flashlog) and let the user save it
-// wherever they like (defaulting to the Desktop) so they can send it to us.
-async function saveLogsBundle() {
-  const parts = [
-    logger.metadataHeader(),
-    "\n\n========== APP LOG ==========\n",
-    logger.getExportText(),
-    "\n\n========== FLASH LOG (flashlog.txt) ==========\n",
-  ];
-  const flashLogPath = getFlashLogPath();
-  try {
-    if (fs.existsSync(flashLogPath)) {
-      parts.push(fs.readFileSync(flashLogPath, "utf8"));
-    } else {
-      parts.push("(flashlog.txt not found — only produced by the debug Flash player)\n");
+    const u = new URL(url);
+    if (u.protocol === "https:" || u.protocol === "http:" || u.protocol === "mailto:") {
+      logger.info("nav", `opening in the browser: ${u.href.slice(0, 200)}`);
+      // (development test runs: log only, open nothing)
+      if (!app.isPackaged && process.env.EKOLOKO_NO_EXTERNAL === "1") return;
+      shell.openExternal(u.href);
+      return;
     }
   } catch (e) {
-    parts.push(`(could not read flashlog.txt: ${(e && e.message) || e})\n`);
+    /* not a URL */
   }
+  logger.warn("nav", `blocked opening ${String(url).slice(0, 200)}`);
+}
 
+// ---------------------------------------------------------------------------
+// Logs
+// ---------------------------------------------------------------------------
+
+async function saveLogsBundle() {
+  const text = [logger.metadataHeader(), "\n\n========== APP LOG ==========\n", logger.getExportText()].join("");
   const stamp = new Date().toISOString().replace(/[:.]/g, "-");
   const { canceled, filePath } = await dialog.showSaveDialog(win, {
     title: "שמירת לוגים",
     defaultPath: path.join(app.getPath("desktop"), `ekoloko-logs-${stamp}.txt`),
     filters: [{ name: "Log", extensions: ["txt"] }],
   });
-  if (canceled || !filePath) {
-    logger.info("save-logs", "user cancelled the save dialog");
-    return false;
-  }
-
-  fs.writeFileSync(filePath, parts.join(""), "utf8");
+  if (canceled || !filePath) return false;
+  fs.writeFileSync(filePath, text, "utf8");
   logger.info("save-logs", `saved logs to ${filePath}`);
   shell.showItemInFolder(filePath);
   return true;
 }
 
-// Mirror a webContents' console + lifecycle/crash events into the log file so
-// the saved bundle reflects what actually happened in the game.
 function attachWebContentsLogging(wc, source) {
-  const levelName = (level) => ["INFO", "WARN", "ERROR", "INFO"][level] || "INFO";
-
-  wc.on("console-message", (_e, level, message, line, sourceId) => {
-    const where = sourceId ? ` (${sourceId}:${line})` : "";
-    logger.info(source, `console[${levelName(level)}]: ${message}${where}`);
-    // TEMP debug overlay: echo the game's console onto the on-screen box.
-    if (source === "game") pushDebug(`console: ${String(message).slice(0, 160)}`);
+  wc.on("console-message", (event) => {
+    // (Electron 35+: one details object)
+    const level = event.level || "info";
+    if (level === "debug" || level === "verbose") return;
+    const where = event.sourceId ? ` (${event.sourceId}:${event.lineNumber})` : "";
+    logger.info(source, `console[${String(level).toUpperCase()}]: ${String(event.message).slice(0, 2000)}${where}`);
   });
-  wc.on("did-fail-load", (_e, code, desc, url) => {
-    logger.error(source, `did-fail-load ${code} ${desc} ${url || ""}`);
+  wc.on("did-fail-load", (_e, code, desc, url, isMainFrame) => {
+    if (isMainFrame) logger.error(source, `did-fail-load ${code} ${desc} ${url || ""}`);
   });
-  wc.on("did-fail-provisional-load", (_e, code, desc, url) => {
-    logger.error(source, `did-fail-provisional-load ${code} ${desc} ${url || ""}`);
-  });
-  wc.on("dom-ready", () => logger.info(source, "dom-ready"));
   wc.on("did-finish-load", () => logger.info(source, "did-finish-load"));
   wc.on("did-navigate", (_e, url) => logger.info(source, `did-navigate ${url}`));
-  // Electron 8 has no `render-process-gone` — use `crashed`.
-  wc.on("crashed", (_e, killed) => logger.error(source, `renderer crashed (killed=${killed})`));
   wc.on("unresponsive", () => logger.warn(source, "unresponsive"));
   wc.on("responsive", () => logger.info(source, "responsive"));
-  wc.on("plugin-crashed", (_e, name, version) =>
-    logger.error(source, `plugin-crashed: ${name} ${version}`)
-  );
-  wc.on("certificate-error", (_e, url, error) =>
-    logger.warn(source, `certificate-error ${error} ${url}`)
-  );
 }
 
-// F12 / Ctrl+Shift+I / Cmd+Shift+I (macOS) toggle the game's DevTools.
-// (Cmd+Shift+I, not Cmd+Alt+I: macOS's default menu already owns Alt+Cmd+I and
-// menu accelerators win over before-input-event, but they target the focused
-// window — usually the control bar — instead of the game view.)
 function attachDevtoolsShortcut(wc, targetWc) {
   wc.on("before-input-event", (event, input) => {
     if (input.type !== "keyDown") return;
     const isF12 = input.key === "F12";
-    const isCtrlShiftI =
-      (input.control || input.meta) && input.shift && String(input.key).toLowerCase() === "i";
+    const isCtrlShiftI = (input.control || input.meta) && input.shift && String(input.key).toLowerCase() === "i";
     if (isF12 || isCtrlShiftI) {
       if (targetWc.isDevToolsOpened()) targetWc.closeDevTools();
       else targetWc.openDevTools({ mode: "detach" });
@@ -1098,159 +492,205 @@ function attachDevtoolsShortcut(wc, targetWc) {
   });
 }
 
-function createWindow() {
-  win = new BrowserWindow({
-    autoHideMenuBar: true,
-    backgroundColor: "#6aaa1e",
-    show: false,
-    webPreferences: {
-      nodeIntegration: true,
-      contextIsolation: false,
-      devTools: DEVTOOLS_ENABLED,
-      plugins: true,
-    },
-  });
-
-  // maximize() right after creation is unreliable on Linux window managers:
-  // the request can arrive before the WM has mapped the window and gets
-  // silently dropped, leaving the window at Electron's 800x600 default.
-  // Waiting for ready-to-show (and showing the window maximized) makes it
-  // stick everywhere.
-  win.once("ready-to-show", () => {
-    win.maximize();
-    win.show();
-  });
-
-  // maximize() is a request to the window manager, not an immediate resize —
-  // on Linux/X11 it's handled asynchronously, so getContentBounds() read right
-  // after calling it can still report the pre-maximize size. The BrowserView
-  // bounds computed at creation time are wrong until something re-measures
-  // after the real resize lands. 'maximize' fires once that's actually
-  // happened; the timers are a belt-and-suspenders fallback for window
-  // managers where a window shown already-maximized doesn't fire either event.
-  win.on("maximize", () => {
-    setViewBounds();
-    refreshZoom();
-  });
-  setTimeout(() => {
-    if (win && !win.isDestroyed()) {
-      setViewBounds();
-      refreshZoom();
+// F11 toggles fullscreen from either view (the control bar's button does too).
+function attachFullscreenShortcut(wc) {
+  wc.on("before-input-event", (event, input) => {
+    if (input.type === "keyDown" && input.key === "F11" && !input.isAutoRepeat) {
+      if (win && !win.isDestroyed()) win.setFullScreen(!win.isFullScreen());
+      event.preventDefault();
     }
-  }, 500);
-  setTimeout(() => {
-    if (win && !win.isDestroyed()) {
-      setViewBounds();
-      refreshZoom();
-    }
-  }, 1500);
-
-  const controlHtmlPath = path.join(app.getPath("temp"), `ekoloko-control-${Date.now()}.html`);
-  fs.writeFileSync(controlHtmlPath, getControlPageHtml(), "utf8");
-  win.loadFile(controlHtmlPath);
-
-  const presencePreloadPath = path.join(app.getPath("temp"), `ekoloko-presence-preload-${Date.now()}.js`);
-  fs.writeFileSync(presencePreloadPath, getPresencePreloadJs(), "utf8");
-
-  siteView = new BrowserView({
-    webPreferences: {
-      nodeIntegration: false,
-      contextIsolation: true,
-      devTools: DEVTOOLS_ENABLED,
-      plugins: true,
-      preload: presencePreloadPath,
-      allowRunningInsecureContent: true,
-      // The control bar is a separate view, so the game view can lose focus
-      // while the user is playing. Without this, Chromium throttles the blurred
-      // webContents to ~1fps and Flash visibly stutters.
-      backgroundThrottling: false,
-    },
   });
+}
 
-  win.setBrowserView(siteView);
-  // Paint the game view solid ekoloko green. Without this the BrowserView is
-  // transparent, so while a page is navigating it briefly reveals the control
-  // bar's gradient body underneath (propagated across the whole viewport),
-  // which reads as a "broken" stretched gradient. Matches the window bg and
-  // the light-mode value used by the dark-mode toggle below.
-  siteView.setBackgroundColor("#6aaa1e");
-  setViewBounds();
+// ---------------------------------------------------------------------------
+// Navigation policy for every webContents the app creates
+// ---------------------------------------------------------------------------
 
-  attachWebContentsLogging(siteView.webContents, "game");
-  attachWebContentsLogging(win.webContents, "control-bar");
+const CONTROL_PAGE = path.join(__dirname, "..", "control", "index.html");
 
-  if (DEVTOOLS_ENABLED) {
-    attachDevtoolsShortcut(siteView.webContents, siteView.webContents);
-    attachDevtoolsShortcut(win.webContents, siteView.webContents);
-  }
+function isControlContents(wc) {
+  return !!(win && !win.isDestroyed() && wc === win.webContents);
+}
 
-  if (DEBUG_MODE) {
-    logger.info("devtools", "launched with --devtools; DevTools enabled");
-    siteView.webContents.once("dom-ready", () => {
-      siteView.webContents.openDevTools({ mode: "detach" });
-    });
-  }
-
-  siteView.webContents.loadURL(LOGIN_URL);
-  siteView.webContents.setAudioMuted(false);
-
-  siteView.webContents.on("new-window", (event, url) => {
-    event.preventDefault();
-    if (url === DISCORD_URL) {
-      openDiscordLink();
+app.on("web-contents-created", (_event, wc) => {
+  // Top-level navigation: ekoloko.org stays in the app, anything else goes to
+  // the system browser. The control bar never navigates.
+  const guard = (event, url) => {
+    if (isControlContents(wc)) {
+      event.preventDefault();
       return;
     }
-    const popup = new BrowserWindow({
-      width: 1024,
-      height: 768,
-      autoHideMenuBar: true,
-      webPreferences: {
-        nodeIntegration: false,
-        contextIsolation: true,
-        plugins: true,
-        allowRunningInsecureContent: true,
-      },
-    });
-    popup.loadURL(url);
+    if (isAllowedUrl(url)) return;
+    event.preventDefault();
+    openExternal(url);
+  };
+  wc.on("will-navigate", (event) => {
+    if (event.isMainFrame === false) return;
+    guard(event, event.url);
+  });
+  wc.on("will-redirect", (event) => {
+    if (event.isMainFrame === false) return;
+    guard(event, event.url);
   });
 
-  siteView.webContents.on("did-finish-load", () => {
-    // Always set the zoom explicitly after a load: Chromium otherwise persists
-    // the per-origin zoom factor, and in fit mode the new page's embed has to be
-    // measured again anyway.
-    refreshZoom();
-    if (isDarkMode) applyDarkModeCSS(true);
-    // TEMP debug overlay (dev only) — re-inject after every navigation.
-    if (DEVTOOLS_ENABLED) {
-      siteView.webContents.executeJavaScript(getDebugOverlayJs()).catch(() => {});
+  // window.open / target=_blank: ekoloko.org pages open in a small in-app
+  // window (the game's info pages, as 1.x), everything else in the browser.
+  wc.setWindowOpenHandler(({ url }) => {
+    if (url === DISCORD_URL || !isAllowedUrl(url) || isControlContents(wc)) {
+      openExternal(url);
+      return { action: "deny" };
+    }
+    return {
+      action: "allow",
+      overrideBrowserWindowOptions: {
+        width: 1024,
+        height: 768,
+        autoHideMenuBar: true,
+        backgroundColor: "#ffffff",
+        webPreferences: {
+          sandbox: true,
+          contextIsolation: true,
+          nodeIntegration: false,
+          devTools: DEVTOOLS_ENABLED,
+          spellcheck: false,
+        },
+      },
+    };
+  });
+
+  wc.on("will-attach-webview", (event) => event.preventDefault());
+});
+
+// Permissions: the game needs none of camera / mic / location / notifications.
+function setupPermissions(ses) {
+  const allowed = new Set(["fullscreen", "clipboard-sanitized-write", "pointerLock", "keyboardLock"]);
+  ses.setPermissionRequestHandler((wc, permission, callback, details) => {
+    const origin = (details && details.requestingUrl) || (wc && wc.getURL()) || "";
+    callback(allowed.has(permission) && isAllowedUrl(origin));
+  });
+  ses.setPermissionCheckHandler((_wc, permission, requestingOrigin) => {
+    return allowed.has(permission) && isAllowedUrl(requestingOrigin);
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Window
+// ---------------------------------------------------------------------------
+
+function createWindow() {
+  const saved = readSettings().window || {};
+  const bounds = boundsVisible(saved.bounds) ? saved.bounds : null;
+
+  win = new BrowserWindow({
+    ...(bounds || { width: 1280, height: 800 }),
+    minWidth: 640,
+    minHeight: 480,
+    autoHideMenuBar: true,
+    backgroundColor: GREEN,
+    show: false,
+    title: "ekoloko",
+    icon: process.platform === "linux" ? path.join(__dirname, "..", "..", "build", "icon.png") : undefined,
+    webPreferences: {
+      preload: path.join(__dirname, "preloads", "control.js"),
+      sandbox: true,
+      contextIsolation: true,
+      nodeIntegration: false,
+      devTools: DEVTOOLS_ENABLED,
+      spellcheck: false,
+    },
+  });
+
+  // First run (no saved state) opens maximised, as 1.x always did.
+  win.once("ready-to-show", () => {
+    if (!bounds || saved.maximized !== false) win.maximize();
+    win.show();
+    if (saved.fullscreen) win.setFullScreen(true);
+  });
+
+  win.loadFile(CONTROL_PAGE);
+
+  gameView = new WebContentsView({
+    webPreferences: {
+      preload: path.join(__dirname, "preloads", "game.js"),
+      sandbox: true,
+      contextIsolation: true,
+      nodeIntegration: false,
+      devTools: DEVTOOLS_ENABLED,
+      spellcheck: false,
+      // Default (true): a minimised or fully covered window stops drawing and
+      // its timers slow to once a second, as in a browser tab; the socket's
+      // 10 s heartbeat survives that (intensive throttling is off, above).
+      backgroundThrottling: true,
+      additionalArguments: [`--ekoloko-app-version=${app.getVersion()}`],
+    },
+  });
+  gameView.setBackgroundColor(GREEN);
+  win.contentView.addChildView(gameView);
+  setViewBounds();
+
+  const wc = gameView.webContents;
+  attachWebContentsLogging(wc, "game");
+  attachWebContentsLogging(win.webContents, "control-bar");
+  attachFullscreenShortcut(wc);
+  attachFullscreenShortcut(win.webContents);
+  if (DEVTOOLS_ENABLED) {
+    attachDevtoolsShortcut(wc, wc);
+    attachDevtoolsShortcut(win.webContents, wc);
+  }
+
+  wc.on("render-process-gone", (_e, details) => {
+    logger.error("game", `renderer gone: ${details.reason} (exit ${details.exitCode})`);
+    // A crash / out-of-memory: bring the game back instead of a dead view.
+    if (details.reason !== "clean-exit" && details.reason !== "killed") {
+      setTimeout(() => {
+        const g = gameContents();
+        if (g) g.loadURL(GAME.url);
+      }, 1000);
     }
   });
+
+  wc.on("did-finish-load", () => {
+    // Chromium remembers the zoom per origin; set it after every load.
+    refreshZoom();
+    if (isDarkMode) applyDarkModeCSS(true);
+  });
+
+  wc.loadURL(GAME.url);
 
   win.on("resize", () => {
     setViewBounds();
     scheduleZoomRefresh();
+    scheduleWindowStateSave();
   });
+  win.on("move", scheduleWindowStateSave);
+  win.on("maximize", () => {
+    setViewBounds();
+    refreshZoom();
+    scheduleWindowStateSave();
+  });
+  win.on("unmaximize", scheduleWindowStateSave);
   win.on("enter-full-screen", () => {
-    if (win) win.webContents.send("fullscreen-changed", true);
-    // The window jumps straight to the screen's full size with no decorations,
-    // which doesn't reliably fire 'resize' on its own (same class of issue as
-    // the maximize() timing above) — the BrowserView is left sized for the
-    // pre-fullscreen window, showing as a gap/line along the edge it fell short.
+    sendToControl("fullscreen-changed", true);
     setViewBounds();
     scheduleZoomRefresh();
+    scheduleWindowStateSave();
   });
   win.on("leave-full-screen", () => {
-    if (win) win.webContents.send("fullscreen-changed", false);
+    sendToControl("fullscreen-changed", false);
     setViewBounds();
     scheduleZoomRefresh();
+    scheduleWindowStateSave();
+  });
+  win.on("close", () => {
+    if (windowStateTimer) clearTimeout(windowStateTimer);
+    windowStateTimer = null;
+    saveWindowState();
   });
   win.on("closed", () => {
     win = null;
-    siteView = null;
-    if (zoomResizeTimer) {
-      clearTimeout(zoomResizeTimer);
-      zoomResizeTimer = null;
-    }
+    gameView = null;
+    if (zoomResizeTimer) clearTimeout(zoomResizeTimer);
+    zoomResizeTimer = null;
     if (zoomSaveTimer) {
       clearTimeout(zoomSaveTimer);
       zoomSaveTimer = null;
@@ -1260,18 +700,19 @@ function createWindow() {
   });
 }
 
-function getUninstallerPath() {
-  return path.join(path.dirname(process.execPath), `Uninstall ${app.getName()}.exe`);
-}
+// ---------------------------------------------------------------------------
+// Menu (Windows: File > Uninstall, as 1.x)
+// ---------------------------------------------------------------------------
 
 function uninstallApp() {
-  const uninstallerPath = getUninstallerPath();
-
-  if (!fs.existsSync(uninstallerPath)) {
-    dialog.showErrorBox("Uninstaller not found", `Could not find ${path.basename(uninstallerPath)}.`);
+  const dir = path.dirname(process.execPath);
+  const target = [`Uninstall ${app.getName()}.exe`, "Uninstall ekoloko.exe"]
+    .map((f) => path.join(dir, f))
+    .find((p) => fs.existsSync(p));
+  if (!target) {
+    dialog.showErrorBox("Uninstaller not found", "Could not find the ekoloko uninstaller.");
     return;
   }
-
   const response = dialog.showMessageBoxSync(win, {
     type: "warning",
     buttons: ["Cancel", "Uninstall"],
@@ -1281,256 +722,257 @@ function uninstallApp() {
     message: "This will remove ekoloko from your computer.",
     detail: "The app will close and launch the Windows uninstaller.",
   });
-
-  if (response !== 1) {
-    return;
-  }
-
-  execFile(uninstallerPath, [], {
-    detached: true,
-    stdio: "ignore",
-  }).unref();
-
+  if (response !== 1) return;
+  execFile(target, [], { detached: true, stdio: "ignore" }).unref();
   app.quit();
 }
 
 function createAppMenu() {
-  if (process.platform !== "win32") {
+  if (process.platform === "darwin") {
+    // macOS needs an app menu for Cmd+Q / copy / paste.
+    Menu.setApplicationMenu(Menu.buildFromTemplate([{ role: "appMenu" }, { role: "editMenu" }, { role: "windowMenu" }]));
     return;
   }
-
+  if (process.platform !== "win32") {
+    Menu.setApplicationMenu(null);
+    return;
+  }
   Menu.setApplicationMenu(
     Menu.buildFromTemplate([
       {
         label: "File",
-        submenu: [
-          {
-            label: "Uninstall ekoloko",
-            click: uninstallApp,
-          },
-          { type: "separator" },
-          { role: "quit" },
-          ],
+        submenu: [{ label: "Uninstall ekoloko", click: uninstallApp }, { type: "separator" }, { role: "quit" }],
       },
     ])
   );
 }
 
+// ---------------------------------------------------------------------------
+// Auto-update (electron-updater, GitHub Releases of ekolokonet/ekoloko-desktop-app)
+// ---------------------------------------------------------------------------
+
 function initAutoUpdater() {
-  // Auto-update pulls each new GitHub Release from the public repo (see the
-  // `publish` provider in package.json). Only meaningful in packaged builds.
-  // macOS is skipped: the app is unsigned, and Squirrel.Mac refuses to apply
-  // updates to an unsigned bundle. Windows + Linux update silently.
+  // Packaged Windows / Linux builds only. macOS: Squirrel.Mac only applies
+  // updates to a signed app, and the mac build is unsigned.
   if (!app.isPackaged || process.platform === "darwin") return;
-
+  if (GAME.target !== "prod" || process.env.EKOLOKO_NO_UPDATE === "1") {
+    logger.info("updater", "skipped (test target or EKOLOKO_NO_UPDATE=1)");
+    return;
+  }
+  let autoUpdater;
+  try {
+    ({ autoUpdater } = require("electron-updater"));
+  } catch (e) {
+    logger.error("updater", `electron-updater missing: ${(e && e.message) || e}`);
+    return;
+  }
+  autoUpdater.logger = {
+    info: (m) => logger.info("updater", String(m)),
+    warn: (m) => logger.warn("updater", String(m)),
+    error: (m) => logger.error("updater", String(m)),
+    debug: () => {},
+  };
   autoUpdater.autoDownload = true;
-  autoUpdater.on("error", (err) => {
-    // never let a failed update check disrupt the game, but record it
-    logger.error("updater", (err && err.message) || String(err));
-  });
-  autoUpdater.on("checking-for-update", () => logger.info("updater", "checking for update"));
-  autoUpdater.on("update-available", (info) =>
-    logger.info("updater", `update available: ${(info && info.version) || "?"}`)
-  );
-  autoUpdater.on("update-not-available", () => logger.info("updater", "no update available"));
-
+  // A downloaded update also installs by itself when the player closes the app.
+  autoUpdater.autoInstallOnAppQuit = true;
+  autoUpdater.on("error", (err) => logger.error("updater", (err && err.message) || String(err)));
   autoUpdater.on("update-downloaded", (info) => {
-    logger.info("updater", `update downloaded: ${(info && info.version) || "?"}`);
-    const response = dialog.showMessageBoxSync(win, {
-      type: "info",
-      buttons: ["Later", "Restart now"],
-      defaultId: 1,
-      cancelId: 0,
-      title: "Update ready",
-      message: "A new version of ekoloko is ready to install.",
-      detail: `Version ${info && info.version ? info.version : ""} will be applied after restart.`,
-    });
-    if (response === 1) {
-      autoUpdater.quitAndInstall();
-    }
+    const version = (info && info.version) || "";
+    logger.info("updater", `update downloaded: ${version}`);
+    if (!win || win.isDestroyed()) return;
+    dialog
+      .showMessageBox(win, {
+        type: "info",
+        buttons: ["אחר כך", "הפעלה מחדש עכשיו"],
+        defaultId: 1,
+        cancelId: 0,
+        title: "עדכון מוכן",
+        message: "גרסה חדשה של אקולוקו מוכנה להתקנה.",
+        detail: `גרסה ${version} תותקן בהפעלה מחדש (או כשסוגרים את המשחק).`,
+      })
+      .then(({ response }) => {
+        if (response === 1) autoUpdater.quitAndInstall(true, true);
+      })
+      .catch(() => {});
   });
-
   autoUpdater.checkForUpdates().catch(() => {});
-  // Re-check periodically for long-running sessions.
   setInterval(() => autoUpdater.checkForUpdates().catch(() => {}), 6 * 60 * 60 * 1000);
 }
 
-app.whenReady().then(() => {
-  logger.init({ flashVersion: FLASH_VERSION });
-  logger.info("app", `ekoloko starting (debugMode=${DEBUG_MODE})`);
-  logger.info(
-    "flash",
-    `ppapi-flash v${FLASH_VERSION} path=${flashPluginPath} exists=${fs.existsSync(flashPluginPath)}`
-  );
+// ---------------------------------------------------------------------------
+// IPC (control bar and game view; every handler checks who is asking)
+// ---------------------------------------------------------------------------
 
-  // Surface whether Chromium is hardware-accelerated or fell back to software
-  // (SwiftShader) compositing. Software compositing is the prime suspect for
-  // Flash FPS lag that only shows up in the app and not in standalone Chrome.
-  try {
-    const gpu = app.getGPUFeatureStatus();
-    logger.info(
-      "gpu",
-      `gpu_compositing=${gpu.gpu_compositing} 2d_canvas=${gpu.gpu_compositing && gpu["2d_canvas"]} webgl=${gpu.webgl} rasterization=${gpu.rasterization}`
-    );
-  } catch (e) {
-    logger.warn("gpu", `could not read GPU feature status: ${(e && e.message) || e}`);
-  }
+function fromControl(event) {
+  return isControlContents(event.sender);
+}
 
-  process.on("uncaughtException", (err) => {
-    logger.error("uncaughtException", (err && err.stack) || String(err));
-  });
-  process.on("unhandledRejection", (reason) => {
-    logger.error("unhandledRejection", (reason && reason.stack) || String(reason));
-  });
+function fromGame(event) {
+  return !!(gameView && event.sender === gameView.webContents);
+}
 
-  // Only configure Flash trace/error logging when launched in debug mode; normal
-  // users run the plain release player with no mm.cfg / flashlog side effects.
-  if (DEBUG_MODE) ensureFlashDebugConfig();
+function registerIpc() {
+  const onControl = (channel, handler) =>
+    ipcMain.on(channel, (event, value) => {
+      if (!fromControl(event)) return;
+      handler(value);
+    });
 
-  // Load the persisted privacy switch and zoom preference before the control bar
-  // HTML is generated so the button and slider render in the right state.
-  const settings = readSettings();
-  presenceShowDetails = settings.presenceShowDetails === true;
-  zoomFitEnabled = settings.zoomFit !== false;
-  manualZoom = clampZoom(settings.zoomLevel !== undefined ? settings.zoomLevel : 1);
-
-  createAppMenu();
-  createWindow();
-  initAutoUpdater();
-
-  // Rich presence starts as the generic "playing ekoloko" activity right away;
-  // username/room only ever show after the game reports them AND the privacy
-  // switch is on.
-  if (DISCORD_CLIENT_ID) {
-    discordPresence.init(DISCORD_CLIENT_ID, overlayLogger);
-    updatePresenceActivity();
-  }
-
-  ipcMain.on("toggle-fullscreen", () => {
-    if (!win) return;
-    win.setFullScreen(!win.isFullScreen());
+  ipcMain.handle("control-init", (event) => {
+    if (!fromControl(event)) return null;
+    return {
+      zoom: manualZoom,
+      zoomFit: zoomFitEnabled,
+      presenceEnabled: !!DISCORD_CLIENT_ID,
+      presenceShowDetails,
+      isFullScreen: !!(win && win.isFullScreen()),
+      target: GAME.target,
+    };
   });
 
-  // The control bar's height now flexes with window width (see .bar's CSS
-  // clamp()s), so it reports its real laid-out height here instead of the
-  // game view assuming the fixed CONTROL_BAR_HEIGHT.
-  ipcMain.on("control-bar-height", (_event, height) => {
+  onControl("toggle-fullscreen", () => {
+    if (win) win.setFullScreen(!win.isFullScreen());
+  });
+
+  onControl("control-bar-height", (height) => {
     const h = Math.round(Number(height));
-    if (!isFinite(h) || h <= 0 || h === controlBarHeight) return;
+    if (!isFinite(h) || h <= 0 || h > 400 || h === controlBarHeight) return;
     controlBarHeight = h;
     setViewBounds();
     scheduleZoomRefresh();
   });
 
-  ipcMain.on("zoom-change", (_event, zoomFactor) => {
+  onControl("zoom-change", (zoomFactor) => {
     zoomFitEnabled = false;
     manualZoom = clampZoom(zoomFactor);
     saveZoomPreference();
     refreshZoom();
   });
 
-  ipcMain.on("zoom-fit", () => {
+  onControl("zoom-fit", () => {
     zoomFitEnabled = true;
     saveZoomPreference();
     refreshZoom();
   });
 
-  // The control bar asks for the current factor once its page is up, since fit
-  // mode only knows the number after the game view has been measured.
-  ipcMain.on("zoom-request", () => {
-    refreshZoom();
+  onControl("zoom-request", () => refreshZoom());
+
+  onControl("volume-change", (volume) => {
+    const v = Number(volume);
+    if (isFinite(v)) applyVolume(Math.min(1, Math.max(0, v)));
   });
 
-  ipcMain.on("volume-change", (_event, volume) => {
-    applyVolume(Number(volume));
-  });
-
-  ipcMain.on("restart", () => {
+  onControl("restart", () => {
     app.relaunch();
     app.exit(0);
   });
 
-  ipcMain.on("dark-mode-toggle", async (_event, isDark) => {
-    isDarkMode = isDark;
-    const bg = isDark ? "#1c2d4a" : "#6aaa1e";
+  onControl("dark-mode-toggle", async (isDark) => {
+    isDarkMode = isDark === true;
+    const bg = isDarkMode ? NIGHT : GREEN;
     if (win) win.setBackgroundColor(bg);
-    if (siteView) {
-      siteView.setBackgroundColor(bg);
-      await applyDarkModeCSS(isDark);
+    if (gameView) {
+      gameView.setBackgroundColor(bg);
+      await applyDarkModeCSS(isDarkMode);
     }
   });
 
-  ipcMain.on("open-discord", () => {
-    openDiscordLink();
-  });
+  onControl("open-discord", () => openExternal(DISCORD_URL));
 
-  // From the game BrowserView's presence preload. Only trust the game view —
-  // popup windows load arbitrary external URLs and have no business setting
-  // the presence.
-  ipcMain.on("presence-update", (event, data) => {
-    if (!siteView || event.sender !== siteView.webContents) return;
-    if (!data || typeof data !== "object") return;
-    // Keep the last known username: the game reliably reports the room on every
-    // join, but the username only where the client knows it, so an empty
-    // username field must never wipe a previously reported one.
-    const reportedUsername = typeof data.username === "string" ? data.username.slice(0, 64) : "";
-    if (reportedUsername) presenceUsername = reportedUsername;
-    presenceRoom = typeof data.room === "string" ? data.room.slice(0, 100) : "";
-    overlayLogger.info(
-      "presence",
-      `game reported username=${presenceUsername ? "<set>" : "<empty>"} room=${presenceRoom || "<empty>"}`
-    );
-    updatePresenceActivity();
-  });
-
-  ipcMain.on("presence-clear", (event) => {
-    if (!siteView || event.sender !== siteView.webContents) return;
-    presenceUsername = "";
-    presenceRoom = "";
-    updatePresenceActivity();
-  });
-
-  // Privacy switch from the control bar.
-  ipcMain.on("presence-details-toggle", (_event, show) => {
+  onControl("presence-details-toggle", (show) => {
     presenceShowDetails = show === true;
     saveSetting("presenceShowDetails", presenceShowDetails);
-    overlayLogger.info("presence", `details switch -> ${presenceShowDetails ? "show name+room" : "anonymous"}`);
     updatePresenceActivity();
   });
 
-  ipcMain.on("clear-cache", async () => {
-    if (siteView) {
-      // clearCache() only drops the HTTP cache. The game's preload_assets.js
-      // stashes the SWFs in localStorage for 24h offline use, and a corrupt or
-      // over-quota entry there renders a blank screen that survives restarts and
-      // the old cache-only clear. Wipe the persistent stores too, then reload so
-      // the page re-fetches everything fresh.
-      await siteView.webContents.session.clearCache();
-      await siteView.webContents.session.clearStorageData({
-        storages: ["localstorage", "indexdb", "serviceworkers", "cachestorage"],
-      });
-      siteView.webContents.reload();
-    }
+  onControl("clear-cache", async () => {
+    const wc = gameContents();
+    if (!wc) return;
+    // HTTP cache plus the page's own stores; cookies (the login) stay.
+    await wc.session.clearCache();
+    await wc.session.clearStorageData({
+      storages: ["localstorage", "indexdb", "serviceworkers", "cachestorage", "shadercache"],
+    });
+    wc.reload();
   });
 
-  ipcMain.on("save-logs", async () => {
+  onControl("save-logs", async () => {
     let ok = false;
     try {
       ok = await saveLogsBundle();
     } catch (e) {
       logger.error("save-logs", (e && e.stack) || String(e));
     }
-    if (win && !win.isDestroyed()) {
-      win.webContents.send("save-logs-done", ok);
-    }
+    sendToControl("save-logs-done", ok);
   });
 
-  app.on("activate", function () {
+  ipcMain.on("presence-update", (event, data) => {
+    if (!fromGame(event) || !data || typeof data !== "object") return;
+    const reportedUsername = typeof data.username === "string" ? data.username.slice(0, 64) : "";
+    if (reportedUsername) presenceUsername = reportedUsername;
+    presenceRoom = typeof data.room === "string" ? data.room.slice(0, 100) : "";
+    updatePresenceActivity();
+  });
+
+  ipcMain.on("presence-clear", (event) => {
+    if (!fromGame(event)) return;
+    presenceUsername = "";
+    presenceRoom = "";
+    updatePresenceActivity();
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Start
+// ---------------------------------------------------------------------------
+
+app.whenReady().then(async () => {
+  logger.init();
+  logger.info("app", `ekoloko ${app.getVersion()} starting: target=${GAME.target} url=${GAME.url} packaged=${app.isPackaged} userData=${app.getPath("userData")}`);
+
+  process.on("uncaughtException", (err) => logger.error("uncaughtException", (err && err.stack) || String(err)));
+  process.on("unhandledRejection", (reason) => logger.error("unhandledRejection", (reason && reason.stack) || String(reason)));
+
+  const settings = readSettings();
+  presenceShowDetails = settings.presenceShowDetails === true;
+  zoomFitEnabled = settings.zoomFit !== false;
+  manualZoom = clampZoom(settings.zoomLevel !== undefined ? settings.zoomLevel : 1);
+
+  setupPermissions(session.defaultSession);
+  await cookieMigration.restoreCookies(session.defaultSession, legacyCookies, logger);
+  registerIpc();
+  createAppMenu();
+  createWindow();
+  initAutoUpdater();
+
+  if (DISCORD_CLIENT_ID) {
+    discordPresence.init(DISCORD_CLIENT_ID, logger);
+    updatePresenceActivity();
+  }
+
+  app.on("activate", () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow();
   });
+
+  // Which GPU Chromium really uses (and whether it is hardware accelerated).
+  try {
+    const info = await app.getGPUInfo("complete");
+    const devices = info.gpuDevice || [];
+    const active = devices.find((d) => d.active) || devices[0] || {};
+    logger.info(
+      "gpu",
+      `active vendor=0x${Number(active.vendorId || 0).toString(16)} device=0x${Number(active.deviceId || 0).toString(16)} ` +
+        `driver=${active.driverVersion || "?"} adapters=${devices.length} ` +
+        `renderer=${(info.auxAttributes && info.auxAttributes.glRenderer) || "?"}`
+    );
+    const status = app.getGPUFeatureStatus();
+    logger.info("gpu", `features ${JSON.stringify(status)}`);
+  } catch (e) {
+    logger.warn("gpu", `could not read GPU info: ${(e && e.message) || e}`);
+  }
 });
 
-app.on("window-all-closed", function () {
+app.on("window-all-closed", () => {
   if (process.platform !== "darwin") app.quit();
 });
 
